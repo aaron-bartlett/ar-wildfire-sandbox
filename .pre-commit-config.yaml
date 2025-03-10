@@ -1,0 +1,57 @@
+exclude: 'assets/'
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.3.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-docstring-first
+      - id: check-json
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: end-of-file-fixer
+      - id: requirements-txt-fixer
+      - id: sort-simple-yaml
+      - id: trailing-whitespace
+  - repo: https://gitlab.com/smop/pre-commit-hooks
+    rev: v1.0.0
+    hooks:
+      - id: check-poetry
+        name: check Poetry TOML
+        description: Validates the structure of the pyproject.toml file
+        entry: poetry check
+        language: system
+        pass_filenames: false
+        files: pyproject.toml
+  - repo: local
+    hooks:
+      - id: black
+        name: black
+        entry: black
+        language: python
+        types: [python]
+      - id: mypy
+        name: mypy
+        language: python
+        entry: mypy
+        args: [--config-file, pyproject.toml]
+        exclude: /_tests/
+        exclude: tests/
+        # use your preferred Python version
+        types: [python]
+      - id: isort
+        name: isort
+        language: python
+        entry: isort
+        args: [--profile, black, --trailing-comma, -m=3]
+        types: [python]
+      - id: flake8
+        name: flake8
+        language: python
+        entry: flake8
+        args: [--config=.flake8]
+        types: [python]
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.4
+    hooks:
+    -   id: bandit

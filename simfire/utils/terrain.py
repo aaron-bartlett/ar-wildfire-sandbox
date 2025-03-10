@@ -1,0 +1,154 @@
+from typing import Optional, Tuple, Union
+
+import numpy as np
+
+from ..enums import FuelConstants
+from ..world.parameters import Fuel
+
+
+def random_seed_list(
+    length: int, seed: Optional[int] = None
+) -> Tuple[Tuple[int, ...], ...]:
+    """
+    Create a tuple of tuples  of random integers (to be used as seeds) based on `length`
+    and initial input `seed`
+
+    Arguments:
+        length: Length of each of the nested tuples.
+        seed: Initial random seed for generating seeds.
+
+    Returns:
+        A tuple of tuples containing random integers ranging from 0 to 99_999
+    """
+    np.random.seed(seed)
+    return tuple(
+        tuple(np.random.randint(0, 99_999) for _ in range(length)) for _ in range(length)
+    )
+
+
+def w_0_seed(seed: Union[int, None]) -> float:
+    """
+    Create a `w_0` between `0.2` and `0.6` based on an initial `seed` parameter
+
+    Arguments:
+        seed: Initial seed.
+
+    Returns:
+        The oven-dry fuel load value of the fuel.
+    """
+    np.random.seed(seed)
+    # Update the test for this function if this range is changed in the future
+    w_0 = np.random.uniform(FuelConstants.W_0_MIN, FuelConstants.W_0_MAX)
+    return w_0
+
+
+def delta_seed(seed: Union[int, None]) -> float:
+    """
+    Create a `w_0` between `0.2` and `0.6` based on an initial `seed` parameter
+
+    Arguments:
+        seed: Initial seed.
+
+    Returns:
+        The oven-dry fuel load value of the fuel.
+    """
+    np.random.seed(seed)
+    # Update the test for this function if this range is changed in the future
+    delta = np.random.uniform(FuelConstants.DELTA_MIN, FuelConstants.DELTA_MAX)
+    return delta
+
+
+def m_x_seed(seed: Union[int, None]) -> float:
+    """
+    Create a `w_0` between `0.2` and `0.6` based on an initial `seed` parameter
+
+    Arguments:
+        seed: Initial seed.
+
+    Returns:
+        The oven-dry fuel load value of the fuel.
+    """
+    np.random.seed(seed)
+    # Update the test for this function if this range is changed in the future
+    m_x = np.random.uniform(FuelConstants.M_X_MIN, FuelConstants.M_X_MAX)
+    return m_x
+
+
+def sigma_seed(seed: Union[int, None]) -> float:
+    """
+    Create a `w_0` between `0.2` and `0.6` based on an initial `seed` parameter
+
+    Arguments:
+        seed: Initial seed.
+
+    Returns:
+        The oven-dry fuel load value of the fuel.
+    """
+    np.random.seed(seed)
+    # Update the test for this function if this range is changed in the future
+    sigma = np.random.uniform(FuelConstants.SIGMA_MIN, FuelConstants.SIGMA_MAX)
+    return sigma
+
+
+def chaparral(seed: Union[int, None] = None) -> Fuel:
+    """
+    Create a chaparral fuel object using an optional input seed
+
+    The seed only affects the input to `w_0`, the oven-dry fuel load value.
+
+    Arguments:
+        seed: Initial seed.
+
+    Returns:
+        A fuel with randomized `w_0`, `delta == 6.0`, `M_x == 0.2`, and `sigma == 1739`.
+    """
+    w_0 = w_0_seed(seed)
+    delta = delta_seed(seed)
+    m_x = m_x_seed(seed)
+    sigma = sigma_seed(seed)
+    return Fuel(
+        w_0=w_0,
+        delta=delta,
+        M_x=m_x,
+        sigma=sigma,
+    )
+
+def sin_fuel_func_2d(x : float, y : float) -> Fuel:
+
+        return Fuel(
+            w_0=0.25 * np.sin(0.1 * y) + 0.25 * np.cos(0.1 * x) + 0.5,
+            delta=np.sin(0.1 * y) + np.cos(0.1 * x) + 3,
+            M_x=-0.2 * np.sin(0.1 * y) - 0.2 * np.cos(0.1 * x) + 0.55,
+            sigma=1500,
+        )
+
+def sin_fuel_func_1d(x : float, y : float) -> Fuel:
+
+        return Fuel(
+            w_0=0.5 * np.cos(0.1 * x) + 0.5,
+            delta=2 * np.cos(0.1 * x) + 3,
+            M_x=-0.4 * np.cos(0.1 * x) + 0.55,
+            sigma=1500,
+        )
+
+
+def fuel(seed: Optional[int] = None) -> Tuple[float, float]:
+    """
+    Functionailty to use a random seed to define a center point.
+    To be used with operational data layers
+
+    Predefine CA latitude / longitude bounds (N, W, S, E)
+
+    Returns:
+        A tuple of latitude and longitude.
+    """
+    north = 41.81527476
+    south = 32.85980972
+    east = 113.8035177
+    west = 125.0133402
+
+    np.random.seed(seed)
+    longitude = np.random.uniform(east, west)
+    latitude = np.random.uniform(south, north)
+
+    return (latitude, longitude)
