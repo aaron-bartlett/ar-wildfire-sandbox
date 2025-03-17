@@ -640,6 +640,7 @@ class ManualTopographyLayer(TopographyLayer):
  
         # Expand third dimension to align with data layers
         elevations = np.expand_dims(elevation_grid, axis=-1)
+        #print(f"elevations shape: {elevations.shape}")
 
         return elevations
 
@@ -691,8 +692,8 @@ class OperationalFuelLayer(FuelLayer):
         self.LandFireLatLongBox = LandFireLatLongBox
         self.data = self._get_data()
         self.image = self._make_image()
-        print(f"Data ({self.data.shape}\n{self.data[0:5,0:5]}")
-        print(f"Image ({self.image.shape}\n{self.image[0:5,0:5]}")
+        #print(f"Data ({self.data.shape}\n{self.data[0:5,0:5]}")
+        #print(f"Image ({self.image.shape}\n{self.image[0:5,0:5]}")
 
     def _make_image(self):
         """
@@ -783,6 +784,7 @@ class FunctionalFuelLayer(FuelLayer):
                 image[i, j] = updated_texture
 
         return image
+    
 
     def _update_texture_dryness(self, fuel: Fuel) -> np.ndarray:
         """
@@ -892,6 +894,7 @@ class ManualFuelLayer(FuelLayer):
                 updated_texture = self._update_texture_dryness(self.data[i][j][0])
                 image[i, j] = updated_texture
 
+        #print(f"fuels image shape: {image.shape}")
         return image
 
     def _update_texture_dryness(self, fuel: Fuel) -> np.ndarray:

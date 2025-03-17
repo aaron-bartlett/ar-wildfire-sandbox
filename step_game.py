@@ -11,6 +11,7 @@ sim.rendering = True
 while(input("Type 'exit' to finish simulation:\t") != "exit"):
     sim.run("1h")
 
+
 # Now save a GIF and fire spread graph from the last 2 hours of simulation
 sim.save_gif()
 #sim.save_spread_graph()

@@ -116,18 +116,18 @@ def chaparral(seed: Union[int, None] = None) -> Fuel:
 def sin_fuel_func_2d(x : float, y : float) -> Fuel:
 
         return Fuel(
-            w_0=0.25 * np.sin(0.1 * y) + 0.25 * np.cos(0.1 * x) + 0.5,
-            delta=np.sin(0.1 * y) + np.cos(0.1 * x) + 3,
-            M_x=-0.2 * np.sin(0.1 * y) - 0.2 * np.cos(0.1 * x) + 0.55,
+            w_0=0.25 * np.sin(0.01 * y) + 0.25 * np.cos(0.01 * x) + 0.5,
+            delta=np.sin(0.01 * y) + np.cos(0.01 * x) + 3,
+            M_x=-0.2 * np.sin(0.01 * y) - 0.2 * np.cos(0.01 * x) + 0.55,
             sigma=1500,
         )
 
 def sin_fuel_func_1d(x : float, y : float) -> Fuel:
 
         return Fuel(
-            w_0=0.5 * np.cos(0.1 * x) + 0.5,
-            delta=2 * np.cos(0.1 * x) + 3,
-            M_x=-0.4 * np.cos(0.1 * x) + 0.55,
+            w_0=0.5 * np.cos(0.05 * x) + 0.5,
+            delta=2 * np.cos(0.05 * x) + 3,
+            M_x=-0.4 * np.cos(0.05 * x) + 0.55,
             sigma=1500,
         )
 
