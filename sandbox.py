@@ -10,7 +10,7 @@ from scipy.ndimage import zoom
 HEIGHT = 1080
 WIDTH = 1440
 BASE_HEIGHT = 0.
-MAX_HEIGHT = 100.
+MAX_HEIGHT = 2500.
 #Color Constants from Red to Blue
 COLOR_CONSTANTS = [(0, 0, 255), (0, 150, 255), (0, 255, 255), (0, 255, 150), (0, 255, 0), (150, 255, 0), (255, 255, 0), (255, 150, 0), (255, 0, 0)]
 
@@ -138,8 +138,11 @@ def run_simulation():
             sim.update_mitigation(mitigations)
 
         elif input_flag == "3":
-            row_values = np.linspace(0, 100, WIDTH)
-            height_array = np.tile(row_values, (HEIGHT, 1))
+            #row_values = np.linspace(0, 100, WIDTH)
+            #height_array = np.tile(row_values, (HEIGHT, 1))
+            y_coords = np.arange(HEIGHT-1, -1, -1).reshape(-1, 1)  # Height
+            x_coords = np.arange(WIDTH)  # Width
+            height_array = x_coords + y_coords
             height_surface = get_height_surface(height_array)
             sim._blit_surface(height_surface)
 
