@@ -4,38 +4,38 @@ import threading
 from simfire.utils.config import Config
 from simfire.sim.simulation import FireSimulation
 from simfire.enums import BurnStatus
+import time
 
 HEIGHT = 1080
 WIDTH = 1440
-BASE_HEIGHT = 100.
-MAX_HEIGHT = 90.
+BASE_HEIGHT = 0.
+MAX_HEIGHT = 100.
 #Color Constants from Red to Blue
-COLOR_CONSTANTS = [(255, 0, 0), (255, 150, 0), (255, 255, 0), (150, 255, 0), (0, 255, 0), (0, 255, 150), (0, 255, 255), (0, 150, 255), (0, 0, 255)]
+COLOR_CONSTANTS = [(0, 0, 255), (0, 150, 255), (0, 255, 255), (0, 255, 150), (0, 255, 0), (150, 255, 0), (255, 255, 0), (255, 150, 0), (255, 0, 0)]
 
 def get_height_surface(array):
 
     height, width = array.shape
     array = np.clip(array, BASE_HEIGHT, MAX_HEIGHT)
-    bins = np.linspace(BASE_HEIGHT, MAX_HEIGHT, num=10)
+    bins = np.linspace(BASE_HEIGHT, MAX_HEIGHT, num=9)
     categories = np.digitize(array, bins) - 1 
 
     rgb_array = np.array([COLOR_CONSTANTS[c] for c in categories.flatten()])
     rgb_array = rgb_array.reshape(*array.shape, 3).astype(np.uint8)
-    surface = pygame.Surface((width, height)) 
-    pygame.surfarray.blit_array(surface, np.transpose(rgb_array, (1, 0, 2)))
+    #surface = pygame.Surface((width, height)) 
+    #pygame.surfarray.blit_array(surface, np.transpose(rgb_array, (1, 0, 2)))
+    return pygame.surfarray.make_surface(np.transpose(rgb_array, (1, 0, 2)))
 
-    return surface
 
 def make_line_surface(array):
     height, width = array.shape
-    surface = pygame.Surface((width, height))  
     
+    # NOTE: Keep as width x height to match pygame
     rgb_array = np.zeros((height, width, 3), dtype=np.uint8)
     rgb_array[array == 1] = [255, 0, 0]  
     rgb_array[array < 1] = [255, 255, 255] 
     
-    pygame.surfarray.blit_array(surface, rgb_array)
-    return surface
+    return pygame.surfarray.make_surface(rgb_array)
 
 def read_line(mitigation_type):
 
@@ -46,9 +46,13 @@ def read_line(mitigation_type):
     # HAVE A CNN OR SOMETHING TO READ THE REALSENSE CAMERA INTO A 0/1 ARRAY FOR THE LINE
     # line_input = read_and_display_input()
     # TEST ARRAY
-    line_input = np.zeros(HEIGHT, WIDTH, dtype=int)
-    line_input[HEIGHT // 2, :] = 1
-    return line_input
+    if mitigation_type == BurnStatus.FIRELINE:
+        line_input = np.zeros((HEIGHT, WIDTH), dtype=np.int32)
+        line_input[:, (WIDTH // 2):(WIDTH // 2 + 3)] = 1
+    else:
+        line_input = np.zeros((HEIGHT, WIDTH), dtype=np.int32)
+        line_input[(HEIGHT // 2):(HEIGHT // 2 + 3), :] = 1
+    return  np.transpose(line_input)
 
 
 def listen_for_playpause():
@@ -74,19 +78,19 @@ def create_sim():
 
 def run_simulation():
 
-    global user_input
-    user_input = False
+    #global user_input
+    #user_input = False
 
     sim = create_sim()
-    input_thread = threading.Thread(target=listen_for_playpause, daemon=True)
-    input_thread.start()
+    #input_thread = threading.Thread(target=listen_for_playpause, daemon=True)
+    #input_thread.start()
 
     for i in range (10):
-        sim.run("10m")
+        sim.run("5m")
         print(f"Sim Step {i}")
         input_flag = input("1: PLAY SIM, 2: ADD MITIGATION, 3: DISPLAY CONTOURS, 4 EXIT\n")
         if input_flag == "1":
-            continue
+            sim.run('1h')
         elif input_flag == "2":
             mitigation_input = input("Enter Mitigation Type (fireline, scratchline, wetline): ") 
         
@@ -107,15 +111,22 @@ def run_simulation():
             mitigations = [(*coord, mitigation_type) for coord in line_input_points]
 
             mitigation_surface = make_line_surface(line_input)
-            
+
+            sim._blit_surface(mitigation_surface)
+            print(mitigations[-1])
+            time.sleep(2)
             sim.update_mitigation(mitigations)
+
         elif input_flag == "3":
-            row_values = np.linspace(100, 90, WIDTH)
+            row_values = np.linspace(0, 100, WIDTH)
             height_array = np.tile(row_values, (HEIGHT, 1))
             height_surface = get_height_surface(height_array)
+            sim._blit_surface(height_surface)
 
         else:
+            return
 
+        time.sleep(3)
         ''' TEMPORARILY UNUSED
         if user_input: # UPDATE WITH A WAY TO PAUSE/PLAY
             if True: # UPDATE WITH A WAY TO CHOOSE TO ADD A MITIGATION
@@ -135,7 +146,7 @@ def run_simulation():
             user_input = False'
         '''
 
-    user_input = None
-    input_thread.join()
+    #user_input = None
+
 
 run_simulation()

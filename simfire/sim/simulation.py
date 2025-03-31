@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import IntEnum
 from pathlib import Path
+import pygame
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import h5py
@@ -983,6 +984,8 @@ class FireSimulation(Simulation):
             self._game = Game(
                 self.config.area.screen_size,
                 record=True,
+                show_wind_direction = True,
+                show_wind_magnitude = True
             )
         else:
             self._game.quit()
@@ -1104,3 +1107,12 @@ class FireSimulation(Simulation):
 
         static_dict = {"data": data_locs, "shape": shape}
         return static_dict
+
+    def _blit_surface(
+        self,
+        surface : pygame.Surface) -> None:
+
+        self._game.display_screen.blit(surface, (0, 0))
+        pygame.display.update()
+
+        return

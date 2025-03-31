@@ -72,7 +72,8 @@ class Game:
             # self.display_screen is for actually displaying the simulation to the user
             # These can have different sizes to do potential rescaling
             if self.rescale_factor is None:
-                self.display_screen = pygame.display.set_mode(screen_size)
+                self.display_screen = pygame.display.set_mode((screen_size[1], screen_size[0]))
+                #self.display_screen = pygame.display.set_mode(screen_size)
             else:
                 rescale_size = (
                     self.screen_size[1] * self.rescale_factor,
@@ -314,6 +315,15 @@ class Game:
                 "self.frames is not set to None when saving a GIF."
             )
             raise ValueError
+    '''
+    def _blit_surface(
+        self,
+        surface : pygame.surface.Surface
+        ) -> None:
+
+        self.display_screen.blit(surface, (0, 0))
+        return'
+    '''
 
     def update(
         self,
@@ -412,3 +422,4 @@ class Game:
                 pygame.display.update()
 
         return status
+    
