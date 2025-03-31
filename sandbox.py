@@ -1,5 +1,4 @@
 import pygame
-import pyrealsense2 as rs
 import numpy as np
 import threading
 from simfire.utils.config import Config
@@ -14,26 +13,6 @@ BASE_HEIGHT = 0.
 MAX_HEIGHT = 100.
 #Color Constants from Red to Blue
 COLOR_CONSTANTS = [(0, 0, 255), (0, 150, 255), (0, 255, 255), (0, 255, 150), (0, 255, 0), (150, 255, 0), (255, 255, 0), (255, 150, 0), (255, 0, 0)]
-
-
-def getimageArray(): # returns array from a realsense or we could have a get function that pulls from a regular array
-    pipeline = rs.pipeline()
-    config = rs.config()
-    config.enable_stream(rs.stream.depth, WIDTH, HEIGHT, rs.format.z16, 30)
-
-    try:
-        # Start pipeline and wait for a frame
-        pipeline.start(config)
-        for _ in range(5): 
-            frames = pipeline.wait_for_frames()
-
-        depth = frames.get_depth_frame()
-        if not depth:
-            return np.zeros((HEIGHT, WIDTH), dtype=int)
-        depth_image = np.asanyarray(depth.get_data())
-    finally :
-        pipeline.stop()
-    return depth_image
 
 def load_height_array_from_file(): # if loading from a txt file from a depth cam
     path="EECS498\ar-wildfire-sandbox\depthdata.txt"
