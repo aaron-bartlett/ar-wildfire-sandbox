@@ -35,7 +35,7 @@ def getimageArray(): # returns array from a realsense or we could have a get fun
     return depth_image
 
 def load_height_array_from_file(): # if loading from a txt file from a depth cam
-    path="\Users\antonyj\Desktop\EECS498\ar-wildfire-sandbox\depthdata.txt"
+    path="EECS498\ar-wildfire-sandbox\depthdata.txt"
     target_shape=(1080, 1440)
     try:
         array = np.loadtxt(path)
