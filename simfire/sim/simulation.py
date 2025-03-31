@@ -620,7 +620,7 @@ class FireSimulation(Simulation):
                     )
             else:
                 raise RuntimeError(
-                    "The topography type is set as functional, but "
+                    "The tosography type is set as functional, but "
                     "self.config.terrain.topography_function is not set"
                 )
         elif self.config.terrain.topography_type == "operational":
