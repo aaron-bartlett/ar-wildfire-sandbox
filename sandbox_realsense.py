@@ -11,8 +11,8 @@ import pyrealsense2 as rs
 import torch
 from ultralytics import YOLO
 
-HEIGHT = 480
-WIDTH = 640
+HEIGHT = 720
+WIDTH = 1280
 BASE_HEIGHT = 0.
 MAX_HEIGHT = 2500.
 #Color Constants from Red to Blue
@@ -259,8 +259,8 @@ if len(context.devices) == 0:
 pipe = rs.pipeline() 
 cfg = rs.config()
 
-cfg.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-cfg.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+cfg.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 30)
+cfg.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 30)
 
 pipe.start(cfg)
 
@@ -271,7 +271,7 @@ model = YOLO("runs/detect/train3/weights/best.pt")#YOLO('yolov8n.pt') # runs/det
 #initial_terrain = modify_terrain(depth_array)
 depth_array = modify_terrain()
 
-np.save("./output/depth_camera_input.npy", depth_array)
+np.save("./data/depth_camera_input.npy", depth_array)
 
 sim = run_simulation()
 sim.save_gif()

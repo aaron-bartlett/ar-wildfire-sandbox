@@ -67,7 +67,7 @@ fire:
   fire_initial_position:
     type: static
     static:
-      position: (370, 700)
+      position: (700, 370)
     random:
       seed: 1234
   max_fire_duration: 5
