@@ -12,7 +12,9 @@ WIDTH = 1440
 BASE_HEIGHT = 0.
 MAX_HEIGHT = 2500.
 #Color Constants from Red to Blue
-COLOR_CONSTANTS = [(0, 0, 255), (0, 150, 255), (0, 255, 255), (0, 255, 150), (0, 255, 0), (150, 255, 0), (255, 255, 0), (255, 150, 0), (255, 0, 0)]
+#COLOR_CONSTANTS = [(0, 0, 255), (0, 150, 255), (0, 255, 255), (0, 255, 150), (0, 255, 0), (150, 255, 0), (255, 255, 0), (255, 150, 0), (255, 0, 0)]
+# Earth Tones
+COLOR_CONSTANTS =  [(180, 160, 140), (180, 150, 100), (150, 150, 70), (130, 150, 70), (80, 130, 50), (40, 110, 70), (30, 100, 80), (30, 70, 100), (10, 20, 80)]
 
 def load_height_array_from_file(): # if loading from a txt file from a depth cam
     path="EECS498\ar-wildfire-sandbox\depthdata.txt"
@@ -85,6 +87,35 @@ def listen_for_playpause():
         else:
             user_input = True
             print("User input received! Flag set to True.")
+
+def modify_terrain():
+
+    pygame.init()
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Height Surface Viewer")
+
+    #READ IN CAMERA INPUT
+    y_coords = np.arange(HEIGHT-1, -1, -1).reshape(-1, 1)  # Height
+    x_coords = np.arange(WIDTH)  # Width
+    height_array = x_coords + y_coords
+    
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_s:
+                    running = False
+                    
+        #READ IN CAMERA INPUT
+        height_array = np.flip(height_array)
+        height_surface = get_height_surface(height_array)
+        screen.blit(height_surface, (0, 0))
+        pygame.display.update()
+    pygame.quit()
+    return height_array
 
 def create_sim():
     config = Config("configs/manual_config.yml")
@@ -170,6 +201,10 @@ def run_simulation():
         '''
 
     #user_input = None
+    return sim
 
+initial_terrain = modify_terrain()
 
-run_simulation()
+sim = run_simulation()
+sim.save_gif()
+
