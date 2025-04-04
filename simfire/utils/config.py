@@ -633,6 +633,13 @@ class Config:
             fn_name = None
             kwargs = None
         
+        elif topo_type == 'camera':
+            topo_grid = np.load(self.yaml_data['simulation']['sf_home'] + '/depth_camera_input.npy')
+            topo_layer = ManualTopographyLayer(
+                topo_grid
+            )
+            fn_name = None
+            kwargs = None
         else:
             raise ConfigError(
                 f"The specified topography type ({topo_type}) " "is not supported"
