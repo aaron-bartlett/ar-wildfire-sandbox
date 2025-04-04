@@ -20,6 +20,16 @@ MAX_HEIGHT = 2500.
 # Earth Tones
 COLOR_CONSTANTS =  [(180, 160, 140), (180, 150, 100), (150, 150, 70), (130, 150, 70), (80, 130, 50), (40, 110, 70), (30, 100, 80), (30, 70, 100), (10, 20, 80)]
 
+def interp_row(row):
+     x = np.arange(len(row))
+     mask = row != 0
+     if np.sum(mask) >= 2:
+         return np.interp(x, x[mask], row[mask])
+     elif np.sum(mask) == 1:
+         return np.full_like(row, row[mask][0], dtype=float)
+     else:
+         return row
+
 def load_height_array_from_file(): # if loading from a txt file from a depth cam
     path="EECS498\ar-wildfire-sandbox\depthdata.txt"
     target_shape=(1080, 1440)
@@ -158,6 +168,7 @@ def modify_terrain(depth_array=None):
         color = frame.get_color_frame()
 
         depth_array = np.asanyarray(depth.get_data()) 
+        depth_array = np.apply_along_axis(interp_row, axis=1, arr=depth_array)
         #color_image = np.asanyarray(color.get_data())
 
         height_surface = get_height_surface(depth_array)
