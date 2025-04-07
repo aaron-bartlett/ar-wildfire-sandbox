@@ -168,7 +168,7 @@ def modify_terrain(depth_array=None):
         color = frame.get_color_frame()
 
         depth_array = np.asanyarray(depth.get_data()) 
-        depth_array = np.apply_along_axis(interp_row, axis=1, arr=depth_array)
+        #depth_array = np.apply_along_axis(interp_row, axis=1, arr=depth_array)
         #color_image = np.asanyarray(color.get_data())
 
         height_surface = get_height_surface(depth_array)
