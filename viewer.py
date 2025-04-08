@@ -112,32 +112,28 @@ if len(ctx.devices) == 0:
 
 pipe = rs.pipeline()
 cfg = rs.config()
-cfg.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 30)
-cfg.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 30)
+cfg.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 30)
+cfg.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 30)
 pipe.start(cfg)
-
+for _ in range(5):
+    pipe.wait_for_frames()  # throw away startup junk
 # --- Frame Capture ---
 frame = pipe.wait_for_frames()
 aligned = rs.align(rs.stream.color).process(frame)
 depth_frame = aligned.get_depth_frame()
 color = aligned.get_color_frame()
 depth_intrin = depth_frame.profile.as_video_stream_profile().intrinsics
-
-# --- OPTIONAL: Apply RealSense Filtering ---
-"""dec_filter = rs.decimation_filter()
 spat_filter = rs.spatial_filter()
-temp_filter = rs.temporal_filter()
-hole_filling = rs.hole_filling_filter()
+temp_filter = rs.hole_filling_filter ()
 
-filtered = dec_filter.process(depth_frame)
-filtered = spat_filter.process(filtered)
-"""
-# ✅ Use the filtered depth data
+
+filtered = spat_filter.process(depth_frame)
+filtered = temp_filter.process(filtered)
+
 depth_image = np.asanyarray(depth_frame.get_data())
 depth_image = np.apply_along_axis(row_interp, axis=1, arr=depth_image)
 
-# ✅ Use original color frame
-color_image = np.asanyarray(color.get_data())
+color_image = np.asanyarray(aligned.get_color_frame().get_data())
 
 
 print("Depth image shape:", depth_image.shape)
