@@ -4,7 +4,7 @@ import cv2
 from PIL import Image
 from pupil_apriltags import Detector
 
-TAG_ID_TO_KEY = {15: 'a', 126: 'b', 3: 'c', 47: 'd'}
+TAG_ID_TO_KEY = {15: 'tl', 126: 'tr', 3: 'bl', 47: 'br'}
 
 # --- Utility Functions ---
 def row_interp(row):
@@ -41,7 +41,7 @@ def get_colormap_image(array, colormap=cv2.COLORMAP_TURBO):
     Fit a plane to the AprilTag centers and return the fitted plane (as a 2D array).
     h, w = depth_image.shape
     points = []
-    for key in ['a', 'b', 'c', 'd']:
+    for key in ['tl', 'tr', 'bl', 'br']:
         x, y = tag_dict[key]['center']
         col = np.clip(int(round(x)), 0, w - 1)
         row = np.clip(int(round(y)), 0, h - 1)
@@ -64,8 +64,8 @@ def get_colormap_image(array, colormap=cv2.COLORMAP_TURBO):
 """
 def rectify_array_with_tag_centers(array, tag_dict):
     if len(tag_dict) < 4:
-        raise ValueError("Need all 4 corner tags: 'a', 'b', 'c', 'd'")
-    points = np.array([tag_dict[k]['center'] for k in ['a', 'b', 'c', 'd']], dtype=np.float32)
+        raise ValueError("Need all 4 corner tags: 'tl', 'tr', 'bl', 'br'")
+    points = np.array([tag_dict[k]['center'] for k in ['tl', 'tr', 'bl', 'br']], dtype=np.float32)
     s = points.sum(axis=1)
     diff = np.diff(points, axis=1).flatten()
     ordered_src = np.zeros((4, 2), dtype=np.float32)
@@ -90,7 +90,7 @@ def rectify_array_with_tag_centers(array, tag_dict):
 
 def compute_tag_plane_depth(depth_array, tag_dict):
     centers = []
-    for key in ['a', 'b', 'c', 'd']:
+    for key in ['tl', 'tr', 'bl', 'br']:
         x, y = tag_dict[key]['center']
         col = np.clip(int(round(x)), 0, depth_array.shape[1] - 1)
         row = np.clip(int(round(y)), 0, depth_array.shape[0] - 1)
@@ -158,23 +158,28 @@ for detection in detections:
         tag_dict[key] = {
             'tag_id': detection.tag_id,
             'center': detection.center,
-            'corners': detection.corners
+            # 'corners': detection.corners
         }
 
 # --- Check Tags and Rectify Depth Image ---
-for k in ['a', 'b', 'c', 'd']:
-    if k in tag_dict:
-        v = tag_dict[k]
-        print(f"Key: {k}")
-        print(f"  Tag ID: {v['tag_id']}")
-        print(f"  Center: {v['center']}")
-        print(f"  Corners: {v['corners']}\n")
+def print_tag_dict():
+    for k in ['tl', 'tr', 'bl', 'br']:
+        if k in tag_dict:
+            v = tag_dict[k]
+            print(f"Key: {k}")
+            print(f"  Tag ID: {v['tag_id']}")
+            print(f"  Center: {v['center']}")
+            # print(f"  Corners: {v['corners']}\n")
+
+def get_tag_dict():
+    return tag_dict
+
 def deproject_depth_point(x, y, depth):
     return np.array(rs.rs2_deproject_pixel_to_point(depth_intrin, [x, y], depth))
 
 def get_sandbox_transform(tag_dict, depth_image):
     world_points = []
-    for key in ['a', 'b', 'c', 'd']:
+    for key in ['tl', 'tr', 'bl', 'br']:
         x, y = tag_dict[key]['center']
         col = np.clip(int(round(x)), 0, depth_image.shape[1] - 1)
         row = np.clip(int(round(y)), 0, depth_image.shape[0] - 1)
