@@ -1,7 +1,7 @@
 import pyrealsense2 as rs
 import numpy as np
 import cv2
-from PIL import Image
+import pickle
 from pupil_apriltags import Detector
 
 TAG_ID_TO_KEY = {15: 'tl', 126: 'tr', 3: 'bl', 47: 'br'}
@@ -15,6 +15,7 @@ def row_interp(row):
     indices = np.arange(len(row))
     row[mask] = np.interp(indices[mask], indices[~mask], row[~mask])
     return row
+
 def print_tag_dict():
      for k in ['tl', 'tr', 'bl', 'br']:
          if k in tag_dict:
@@ -26,7 +27,14 @@ def print_tag_dict():
  
 def get_tag_dict():
      return tag_dict
-def rectify_array_with_tag_centers(array, tag_dict):
+
+def store_tags(tag_dict, filename="april_tags.pkl"):
+    with open(filename, "wb") as file:
+        pickle.dump(tag_dict, file)
+    print(f"Tags stored in {filename}")
+    print_tag_dict()
+
+def rectify_color_with_tag_centers(color_image, tag_dict):
     if len(tag_dict) < 4:
         raise ValueError("Need all 4 corner tags: 'tl', 'tr', 'bl', 'br'")
     points = np.array([tag_dict[k]['center'] for k in [ 'tl', 'tr', 'bl', 'br']], dtype=np.float32)
@@ -34,8 +42,35 @@ def rectify_array_with_tag_centers(array, tag_dict):
     diff = np.diff(points, axis=1).flatten()
     ordered_src = np.zeros((4, 2), dtype=np.float32)
     ordered_src[0] = points[np.argmin(s)]  # Top-left
-    ordered_src[2] = points[np.argmax(s)]  # Bottom-right
     ordered_src[1] = points[np.argmin(diff)]  # Top-right
+    ordered_src[2] = points[np.argmax(s)]  # Bottom-right
+    ordered_src[3] = points[np.argmax(diff)]  # Bottom-left
+
+    width = int(np.linalg.norm(ordered_src[0] - ordered_src[1]))
+    height = int(np.linalg.norm(ordered_src[0] - ordered_src[3]))
+
+    dst_pts = np.array([
+        [0, 0],
+        [width - 1, 0],
+        [width - 1, height - 1],
+        [0, height - 1]
+    ], dtype=np.float32)
+
+    M = cv2.getPerspectiveTransform(ordered_src, dst_pts)
+    rectified_color = cv2.warpPerspective(color_image, M, (width, height), flags=cv2.INTER_CUBIC)
+    return rectified_color
+
+
+def rectify_depth_with_tag_centers(array, tag_dict):
+    if len(tag_dict) < 4:
+        raise ValueError("Need all 4 corner tags: 'tl', 'tr', 'bl', 'br'")
+    points = np.array([tag_dict[k]['center'] for k in [ 'tl', 'tr', 'bl', 'br']], dtype=np.float32)
+    s = points.sum(axis=1)
+    diff = np.diff(points, axis=1).flatten()
+    ordered_src = np.zeros((4, 2), dtype=np.float32)
+    ordered_src[0] = points[np.argmin(s)]  # Top-left
+    ordered_src[1] = points[np.argmin(diff)]  # Top-right
+    ordered_src[2] = points[np.argmax(s)]  # Bottom-right
     ordered_src[3] = points[np.argmax(diff)]  # Bottom-left
 
     width = int(np.linalg.norm(ordered_src[0] - ordered_src[1]))
@@ -52,7 +87,7 @@ def rectify_array_with_tag_centers(array, tag_dict):
     rectified = cv2.warpPerspective(array, M, (width, height), flags=cv2.INTER_NEAREST)
     return rectified
 
-def get_colormap_image(array, colormap=cv2.COLORMAP_TURBO):
+def get_colormap_image(array, colormap=cv2.COLORMAP_MAGMA):
     array = np.nan_to_num(array, nan=0.0, posinf=0.0, neginf=0.0)
     
     # Clip extremes before visualizing
@@ -60,6 +95,8 @@ def get_colormap_image(array, colormap=cv2.COLORMAP_TURBO):
 
     norm = cv2.normalize(array, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     return cv2.applyColorMap(norm, colormap)
+
+
 # --- RealSense Initialization ---
 ctx = rs.context()
 if len(ctx.devices) == 0:
@@ -67,7 +104,7 @@ if len(ctx.devices) == 0:
 
 pipe = rs.pipeline()
 cfg = rs.config()
-cfg.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 30)
+cfg.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 30)
 cfg.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 30)
 pipe.start(cfg)
 for _ in range(5):
@@ -121,11 +158,14 @@ while True:
             tag_dict[key] = {
                 'tag_id': detection.tag_id,
                 'center': detection.center,
-                #'corners': detection.corners
             }
 
     if all(k in tag_dict for k in ['tl', 'tr', 'bl', 'br']):
         print("Found all 4 AprilTags!")
+
+        # store april tags in txt file
+        store_tags(tag_dict)
+
         break
     else:
         print(f"Tags found: {list(tag_dict.keys())} — still searching...")
@@ -176,6 +216,8 @@ def generate_elevation_map(depth_image, R, T):
             P_box = R @ P_cam + T
             elevation_map[row, col] = P_box[2]
     return elevation_map
+
+
 # --- Compute Relative Elevation ---
 # Step 1: Compute R, T transform from original depth image
 R, T = get_sandbox_transform(tag_dict, depth_image)
@@ -184,7 +226,7 @@ R, T = get_sandbox_transform(tag_dict, depth_image)
 relative_elevation = generate_elevation_map(depth_image, R, T)
 
 # Step 3: Rectify elevation map only for visualization
-relative_elevation = rectify_array_with_tag_centers(relative_elevation, tag_dict)
+relative_elevation = rectify_depth_with_tag_centers(relative_elevation, tag_dict)
 # Shift elevation map to all-positive (zero = sandbox floor)
 relative_elevation -= np.min(relative_elevation)
 
@@ -203,5 +245,16 @@ relative_elevation = np.clip(relative_elevation, min_elev, max_elev)
 colored_depth = get_colormap_image(relative_elevation)
 cv2.imwrite("depth_colormap.png", colored_depth)
 np.savetxt("depthdata.txt", relative_elevation, fmt='%d')
+
+
+# Rectify the color image and save it
+rectified_color = rectify_color_with_tag_centers(color_image, tag_dict)
+cv2.imwrite("color_original.png", color_image)
+cv2.imwrite("color_rectified.png", rectified_color)
+
+print("Color image shape:", color_image.shape)  # H x W x 3
+print("Depth image shape:", depth_image.shape)  # H x W
+print("Rectified color shape:", rectified_color.shape)  # After warpPerspective
+print("Colored elevation map shape:", colored_depth.shape)  # H x W x 3
 
 pipe.stop()
