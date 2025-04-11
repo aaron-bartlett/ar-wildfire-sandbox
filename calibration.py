@@ -198,6 +198,8 @@ max_elev = np.percentile(relative_elevation, 99)
 # Clip only extreme outliers
 relative_elevation = np.clip(relative_elevation, min_elev, max_elev)
 
+np.savez("calibration_data.npz", R=R, T=T, tag_dict=tag_dict)
+
 
 # --- Colorize and Save ---
 colored_depth = get_colormap_image(relative_elevation)
