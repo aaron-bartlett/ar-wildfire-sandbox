@@ -14,17 +14,21 @@ https://gacc.nifc.gov/oncc/docs/40-Standard%20Fire%20Behavior%20Fuel%20Models.pd
 
 from .parameters import Fuel
 
+CustomGrass = Fuel(w_0=0.5, delta=1.0, M_x=0.12, sigma=2000)
+CustomBrush = Fuel(w_0=0.1, delta=2.0, M_x=0.3, sigma=2000)
+CustomForest = Fuel(w_0=0.1, delta=1.5, M_x=0.5, sigma=2000)
+
 ShortGrass = Fuel(w_0=0.0340, delta=1.000, M_x=0.1200, sigma=3500)
 
-GrassTimberShrubOverstory = Fuel(w_0=0.0918, delta=1.000, M_x=0.1500, sigma=2784)
+GrassTimberShrubOverstory = Fuel(w_0=0.0918, delta=1.000, M_x=0.1500, sigma=2784) #GRASS
 
-TallGrass = Fuel(w_0=0.1377, delta=2.500, M_x=0.2500, sigma=1500)
+TallGrass = Fuel(w_0=0.1377, delta=2.500, M_x=0.2500, sigma=1500) 
 
 Chaparral = Fuel(w_0=0.2296, delta=6.000, M_x=0.2000, sigma=1739)
 
 Brush = Fuel(w_0=0.0459, delta=2.000, M_x=0.2000, sigma=1683)
 
-DormantBrushHardwoodSlash = Fuel(w_0=0.0688, delta=2.500, M_x=0.25, sigma=1564)
+DormantBrushHardwoodSlash = Fuel(w_0=0.0688, delta=2.500, M_x=0.2500, sigma=1564) #TRANSITION
 
 SouthernRough = Fuel(w_0=0.0459, delta=2.500, M_x=0.4000, sigma=1552)
 
@@ -32,7 +36,7 @@ ClosedShortNeedleTimberLitter = Fuel(w_0=0.0688, delta=0.2000, M_x=0.3000, sigma
 
 HardwoodLongNeedlePineTimber = Fuel(w_0=0.1331, delta=0.2000, M_x=0.2500, sigma=2484)
 
-TimberLitterUnderstory = Fuel(w_0=0.1377, delta=1.000, M_x=0.2500, sigma=1764)
+TimberLitterUnderstory = Fuel(w_0=0.1377, delta=1.000, M_x=0.2500, sigma=1764) #FOREST
 
 LightLoggingSlash = Fuel(w_0=0.0688, delta=1.000, M_x=0.1500, sigma=1182)
 

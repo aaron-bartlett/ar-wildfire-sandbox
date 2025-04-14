@@ -131,6 +131,14 @@ def sin_fuel_func_1d(x : float, y : float) -> Fuel:
             sigma=1500,
         )
 
+def sin_fuel_func_w0(x : float, y : float) -> Fuel:
+
+        return Fuel(
+            w_0=0.5 * np.cos(0.05 * x) + 0.5,
+            delta=2 * np.cos(0.05 * x) + 3,
+            M_x=0.5,
+            sigma=1500,
+        )
 
 def fuel(seed: Optional[int] = None) -> Tuple[float, float]:
     """

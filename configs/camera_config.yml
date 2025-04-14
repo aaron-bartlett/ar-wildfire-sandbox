@@ -1,7 +1,7 @@
 # For a description of config parameters, go to
 # https://fireline.pages.mitre.org/simfire/config.html
 area:
-  screen_size: [720, 1280] # h, w
+  screen_size: [250, 250] # h, w
   pixel_scale: 30
 
 display:
@@ -23,7 +23,7 @@ simulation:
 mitigation:
   ros_attenuation: false
 
-manual:
+camera:
   path: "./data/"
 
 operational:
@@ -39,7 +39,7 @@ terrain:
   topography:
     type: camera
   fuel:
-    type: manual
+    type: camera
     functional:
       function: chaparral
       chaparral:
@@ -67,7 +67,7 @@ fire:
   fire_initial_position:
     type: static
     static:
-      position: (700, 370)
+      position: (100, 100)
     random:
       seed: 1234
   max_fire_duration: 5

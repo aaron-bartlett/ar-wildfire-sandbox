@@ -19,6 +19,7 @@ from ..world.fuel_array_functions import chaparral_fn
 from ..world.wind_mechanics.wind_controller import WindController, WindControllerCFD
 from .layers import (
     BurnProbabilityLayer,
+    CameraFuelLayer,
     FuelLayer,
     FunctionalBurnProbabilityLayer,
     FunctionalFuelLayer,
@@ -774,6 +775,13 @@ class Config:
             kwargs = None
         elif fuel_type == "manual":
             fuel_layer = ManualFuelLayer(
+                self.yaml_data["area"]["screen_size"][0],
+                self.yaml_data["area"]["screen_size"][1]
+            )
+            fn_name = None
+            kwargs = None
+        elif fuel_type == "camera":
+            fuel_layer = CameraFuelLayer(
                 self.yaml_data["area"]["screen_size"][0],
                 self.yaml_data["area"]["screen_size"][1]
             )

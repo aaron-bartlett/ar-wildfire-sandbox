@@ -26,10 +26,11 @@ from ..enums import (
 )
 from ..utils.log import create_logger
 from ..utils.units import meters_to_feet
-from ..utils.terrain import sin_fuel_func_1d, sin_fuel_func_2d
+from ..utils.terrain import sin_fuel_func_1d, sin_fuel_func_2d, sin_fuel_func_w0
 from ..world.elevation_functions import ElevationFn
 from ..world.fuel_array_functions import FuelArrayFn
 from ..world.parameters import Fuel
+from ..world.presets import CustomGrass, CustomBrush, CustomForest
 
 log = create_logger(__name__)
 
@@ -717,6 +718,11 @@ class OperationalFuelLayer(FuelLayer):
         """
         func = np.vectorize(lambda x: FuelModelToFuel[x])
         fuel_data = func(self.LandFireLatLongBox.fuel)
+        np.save(
+            "fuel_data.npy",
+            fuel_data,
+            allow_pickle=True,
+        )
         return fuel_data
 
 
@@ -851,7 +857,7 @@ class ManualFuelLayer(FuelLayer):
         self.height = height
         self.width = width
 
-        self.data = self._make_data(sin_fuel_func_1d)
+        self.data = self._make_data(sin_fuel_func_w0)
         self.texture = self._load_texture()
         self.image = self._make_image()
 
@@ -942,6 +948,134 @@ class ManualFuelLayer(FuelLayer):
 
         return texture
 
+class CameraFuelLayer(FuelLayer):
+    """
+    Layer that stores fuel data computed from a function.
+    """
+
+    def __init__(self, height, width) -> None:
+        """
+        Initialize the fuel layer by computing the fuels.
+
+        Arguments:
+            height: The height of the data layer
+            width: The width of the data layer
+            fuel_fn: A callable function that converts (x, y) coorindates to
+                     elevations.
+            name: The name of the fuel layer (e.g.: 'chaparral')
+        """
+        super().__init__()
+        self.height = height
+        self.width = width
+
+        self.data = self._make_data()
+        self.texture = self._load_texture()
+        self.image = self._make_image()
+
+    def _make_data(self) -> np.ndarray:
+        """
+        Use self.fuel_fn to make the fuel data layer.
+
+        Arguments:
+            fuel_fn: A callable function that converts (x, y) coorindates to
+                     elevations.
+
+        Returns:
+            A numpy array containing the fuel data
+        """
+
+        inner_radius = 70
+        outer_radius = 100
+
+        coordinates = np.load('./data/tree_coordinates.npy')
+        #coordinates = [tuple(coord) for coord in coordinates]
+
+        terrain = np.zeros((self.height, self.width), dtype=int)
+    
+        yy, xx = np.meshgrid(np.arange(self.height), np.arange(self.width), indexing='ij')
+
+        for (cy, cx) in coordinates:
+            # Outer circle (radius 10)
+            mask_outer = (yy - cy)**2 + (xx - cx)**2 <= outer_radius**2
+            terrain[mask_outer] += 1
+
+            # Inner circle (radius 7) — overlaps with outer
+            mask_inner = (yy - cy)**2 + (xx - cx)**2 <= inner_radius**2
+            terrain[mask_inner] += 1
+        
+        fuels = np.full_like(terrain, CustomGrass, dtype=object)
+        fuels[terrain == 1] = CustomBrush 
+        fuels[terrain >= 2] = CustomForest
+
+        fuels = np.expand_dims(fuels, axis=-1)
+        print(f"fuels shape: {fuels.shape}")
+
+        return fuels
+
+    def _make_image(self) -> np.ndarray:
+        """
+        Use the fuel data in self.data to make an RGB background image.
+
+        Returns:
+            A NumPy array containing the RGB of the fuel data.
+        """
+        image = np.zeros((self.height, self.width) + (3,))
+        #print(f"image shape: {image.shape}")
+
+        # Loop over the high-level tiles (these are not at the pixel level)
+        
+        for i in range(self.height):
+            for j in range(self.width):
+                # Need these pixel level coordinates to span the correct range
+                updated_texture = self._update_texture_dryness(self.data[i][j][0])
+                image[i, j] = updated_texture
+        
+        return image
+
+    def _update_texture_dryness(self, fuel: Fuel) -> np.ndarray:
+        """
+        Determine the percent change to make the terrain look drier (i.e.
+        more red/yellow/brown) by using the FuelArray values. Then, update
+        the texture color using PIL and image blending with a preset
+        yellow-brown color/image.
+
+        Arguments:
+            fuel: The Fuel with parameters that specify how "dry" the texture should look
+
+        Returns:
+            new_texture: The texture with RGB values modified to look drier based
+                         on the parameters of fuel_arr
+        """
+        # Add the numbers after normalization
+        # M_x is inverted because a lower value is more flammable
+        color_change_pct = fuel.w_0 / 0.2296 + fuel.delta / 7 + (0.2 - fuel.M_x) / 0.2
+        # Divide by 3 since there are 3 values
+        color_change_pct /= 3
+
+        arr = self.texture.copy()
+        arr_img = Image.fromarray(arr)
+        resized_brown = DRY_TERRAIN_BROWN_IMG.resize(arr_img.size)
+        texture_img = Image.blend(arr_img, resized_brown, color_change_pct / 2)
+        new_texture = np.array(texture_img)
+        #print(f"new_texture\n{new_texture}")
+
+        return new_texture
+
+    def _load_texture(self) -> np.ndarray:
+        """
+        Load the terrain tile texture, resize it to the correct
+        shape, and convert to NumPy array
+
+        Returns:
+            The returned numpy array of the texture.
+        """
+        out_size = (1, 1)
+        texture = Image.open(TERRAIN_TEXTURE_PATH)
+        texture = texture.resize(out_size)
+        texture = np.array(texture)
+        #print(f"texture\n{texture}")
+
+        return texture
 
 class HistoricalLayer:
     def __init__(
