@@ -858,8 +858,15 @@ class Config:
                 None,
             )
         elif fire_init_pos_type == "camera":
-            with open(f'./data/object_coords.txt', 'r') as f:
-                fire_init_x, fire_init_y = map(int, f.readline().strip().split())
+            fire_init_x, fire_init_y = 0, 0
+            with open(f'./data/final_objects.txt', 'r') as f:
+                for line in f:
+                    type_str, x_str, y_str = line.strip().split(",")
+                    if type_str == "fire":
+                        fire_init_x, fire_init_y = int(x_str), int(y_str)
+                        continue
+            #with open(f'./data/object_coords.txt', 'r') as f:
+            #    fire_init_x, fire_init_y = map(int, f.readline().strip().split())
             return FireConfig(
                 (fire_init_x, fire_init_y),
                 diagonal_spread,
