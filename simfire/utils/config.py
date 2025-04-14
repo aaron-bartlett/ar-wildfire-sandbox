@@ -857,6 +857,15 @@ class Config:
                 max_fire_duration,
                 None,
             )
+        elif fire_init_pos_type == "camera":
+            with open(f'./data/object_coords.txt', 'r') as f:
+                fire_init_x, fire_init_y = map(int, f.readline().strip().split())
+            return FireConfig(
+                (fire_init_x, fire_init_y),
+                diagonal_spread,
+                max_fire_duration,
+                None,
+            )
         else:
             raise ConfigError(
                 "The specified fire initial position type "

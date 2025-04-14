@@ -65,7 +65,7 @@ terrain:
 
 fire:
   fire_initial_position:
-    type: static
+    type: camera
     static:
       position: (100, 100)
     random:

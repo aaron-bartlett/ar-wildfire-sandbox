@@ -15,6 +15,7 @@ from landfire.product.search import ProductSearch
 from matplotlib.contour import QuadContourSet
 from PIL import Image
 from scipy.ndimage.morphology import binary_dilation
+import ast
 
 from ..enums import (
     COLORS,
@@ -987,7 +988,13 @@ class CameraFuelLayer(FuelLayer):
         inner_radius = 70
         outer_radius = 100
 
-        coordinates = np.load('./data/tree_coordinates.npy')
+        #coordinates = np.load('./data/tree_coordinates.npy')
+        with open(f'./data/object_coords.txt', 'r') as f:
+            line = f.readline().strip()
+            print(line)
+            line = f.readline().strip()
+            print(line)
+            coordinates = ast.literal_eval(line)
         #coordinates = [tuple(coord) for coord in coordinates]
 
         terrain = np.zeros((self.height, self.width), dtype=int)
