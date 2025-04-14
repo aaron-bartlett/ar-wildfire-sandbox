@@ -6,7 +6,7 @@ import cv2
 data = np.load("calibration_data.npz", allow_pickle=True)
 R = data["R"]
 T = data["T"]
-tag_centers = data["tag_centers"].item()  # Dictionary of tag center coordinates
+tag_centers_array = np.array([data[k]['center'] for k in ['tl', 'tr', 'bl', 'br'] if k in data])  # Dictionary of tag center coordinates
 
 # --- RealSense Init ---
 pipe = rs.pipeline()

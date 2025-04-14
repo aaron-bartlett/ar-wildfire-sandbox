@@ -87,7 +87,7 @@ def rectify_depth_with_tag_centers(array, tag_dict):
     rectified = cv2.warpPerspective(array, M, (width, height), flags=cv2.INTER_NEAREST)
     return rectified
 
-def get_colormap_image(array, colormap=cv2.COLORMAP_MAGMA):
+def get_colormap_image(array, colormap=cv2.COLORMAP_TURBO):
     array = np.nan_to_num(array, nan=0.0, posinf=0.0, neginf=0.0)
     
     # Clip extremes before visualizing
