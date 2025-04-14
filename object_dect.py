@@ -6,6 +6,22 @@ import pickle
 from ultralytics import YOLO
 from calibration import *
 
+
+def get_bounding_box_centers(results):
+    centers = []
+
+    for result in results:
+        boxes = result.boxes.xyxy.cpu().numpy()
+
+        for box in boxes:
+            x1, y1, x2, y2 = map(int, box)
+            center_x = (x1 + x2) // 2
+            center_y = (y1 + y2) // 2
+            centers.append((center_x, center_y))
+
+    return centers
+
+
 # step 1: nab april tags location
 def load_tags(filename="april_tags.pkl"):
     try:
@@ -28,7 +44,7 @@ if len(context.devices) == 0:
 pipe = rs.pipeline()
 cfg = rs.config()
 
-cfg.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 30)
+cfg.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 30)
 
 pipe.start(cfg)
 
@@ -36,6 +52,10 @@ for _ in range(5):
     pipe.wait_for_frames()
 
 model = YOLO("runs/detect/train7/weights/best.pt")
+
+def get_coordinates():
+    return center_x, center_y
+
 
 # Run YOLO object detection.
 def detect_objects(frame):
@@ -51,8 +71,8 @@ def main():
 
         color_image = np.asanyarray(color_frame.get_data())
 
-        rect_image = rectify_color_with_tag_centers(color_image, get_tag_dict())
-
+        rect_image = rectify_color_with_tag_centers(color_image, tag_dict)
+    
         # object detection
         results = detect_objects(rect_image)
         for result in results:
