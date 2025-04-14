@@ -12,10 +12,10 @@ import os
 import pygame
 from multiprocessing import Process
 
-HEIGHT = 720
-WIDTH = 1280
+HEIGHT = 378
+WIDTH = 505
 BASE_HEIGHT = 0.
-MAX_HEIGHT = 2500.
+MAX_HEIGHT = 100.
 #Color Constants from Red to Blue
 #COLOR_CONSTANTS = [(0, 0, 255), (0, 150, 255), (0, 255, 255), (0, 255, 150), (0, 255, 0), (150, 255, 0), (255, 255, 0), (255, 150, 0), (255, 0, 0)]
 # Earth Tones
@@ -52,7 +52,7 @@ def scan_options():
         scan_objects()
         return scan_options()
     elif selection == 'c':
-        return calibrate()
+        return initialize()
     elif (selection == 's') | (selection == 'start'):
         if not calibrated:
             print("Please calibrate first.")
@@ -90,7 +90,34 @@ def get_height_surface():
     pygame.display.set_caption("Height Surface Viewer")
     screen.blit(height_surface, (0, 0))
     pygame.display.update()
-    time.sleep(2)
+    clock = pygame.time.Clock()
+    start = time.time()
+    while time.time() - start < 5:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                break
+        clock.tick(60)
+    pygame.quit()
+    return
+
+def get_black_surface():
+
+    array = np.zeros((HEIGHT, WIDTH), dtype=np.uint8)
+    rgb_array = array.reshape(*array.shape, 3).astype(np.uint8)
+ 
+    pygame.init()
+    height_surface =  pygame.surfarray.make_surface(np.transpose(rgb_array, (1, 0, 2)))
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Height Surface Viewer")
+    screen.blit(height_surface, (0, 0))
+    pygame.display.update()
+    clock = pygame.time.Clock()
+    start = time.time()
+    while time.time() - start < 5:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                break
+        clock.tick(60)
     pygame.quit()
     return
 
@@ -99,6 +126,7 @@ def scan_terrain():
     print('scan_terrain')
     global terrain_scanned
     terrain_scanned = True
+    get_height_surface()
     #os.system("python mapping.py")
     
     return
@@ -323,7 +351,7 @@ while not exit:
                 else:
                     running = True
                     print('Simulation Restarted')
-                    
+
     if running:
         sim.run('1m')
 

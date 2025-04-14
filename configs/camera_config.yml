@@ -1,7 +1,7 @@
 # For a description of config parameters, go to
 # https://fireline.pages.mitre.org/simfire/config.html
 area:
-  screen_size: [250, 250] # h, w
+  screen_size: [378, 505] # h, w
   pixel_scale: 30
 
 display:
