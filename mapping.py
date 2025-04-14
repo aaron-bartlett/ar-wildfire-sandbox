@@ -6,16 +6,18 @@ import cv2
 data = np.load("calibration_data.npz", allow_pickle=True)
 R = data["R"]
 T = data["T"]
-tag_centers_array = np.array([data[k]['center'] for k in ['tl', 'tr', 'bl', 'br'] if k in data])  # Dictionary of tag center coordinates
+tag_dict = data["tag_dict"].item()
 
 # --- RealSense Init ---
 pipe = rs.pipeline()
 cfg = rs.config()
 cfg.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 30)
+cfg.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 30)
 pipe.start(cfg)
 
+align = rs.align(rs.stream.color)
 for _ in range(5):
-    pipe.wait_for_frames()  # Skip startup noise
+    align.process(pipe.wait_for_frames())  # Skip startup noise
 
 spat_filter = rs.spatial_filter()
 hole_filter = rs.hole_filling_filter()
@@ -48,16 +50,43 @@ def generate_elevation_map(depth_image, R, T, intrin):
             elevation_map[row, col] = P_box[2]
     return elevation_map
 
+def rectify_depth_with_tag_centers(array, tag_dict):
+    if len(tag_dict) < 4:
+        raise ValueError("Need all 4 corner tags: 'tl', 'tr', 'bl', 'br'")
+    points = np.array([tag_dict[k]['center'] for k in ['tl', 'tr', 'bl', 'br']], dtype=np.float32)
+    s = points.sum(axis=1)
+    diff = np.diff(points, axis=1).flatten()
+    ordered_src = np.zeros((4, 2), dtype=np.float32)
+    ordered_src[0] = points[np.argmin(s)]  # Top-left
+    ordered_src[1] = points[np.argmin(diff)]  # Top-right
+    ordered_src[2] = points[np.argmax(s)]  # Bottom-right
+    ordered_src[3] = points[np.argmax(diff)]  # Bottom-left
+
+    width = int(np.linalg.norm(ordered_src[0] - ordered_src[1]))
+    height = int(np.linalg.norm(ordered_src[0] - ordered_src[3]))
+
+    dst_pts = np.array([
+        [0, 0],
+        [width - 1, 0],
+        [width - 1, height - 1],
+        [0, height - 1]
+    ], dtype=np.float32)
+
+    M = cv2.getPerspectiveTransform(ordered_src, dst_pts)
+    rectified = cv2.warpPerspective(array, M, (width, height), flags=cv2.INTER_NEAREST)
+    return rectified
+
 def get_colormap_image(array, colormap=cv2.COLORMAP_TURBO):
     array = np.nan_to_num(array, nan=0.0, posinf=0.0, neginf=0.0)
-    min_elev = np.percentile(array, 1)
-    max_elev = np.percentile(array, 99)
-    array = np.clip(array, min_elev, max_elev)
-    array = ((array - min_elev) / (max_elev - min_elev) * 255).astype(np.uint8)
-    return cv2.applyColorMap(array, colormap)
+    
+    # Clip extremes before visualizing
+    array = np.clip(array, 0, 200)  # adjust as needed
+
+    norm = cv2.normalize(array, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+    return cv2.applyColorMap(norm, colormap)
 
 # --- Main Capture ---
-frames = pipe.wait_for_frames()
+frames = align.process(pipe.wait_for_frames())
 depth_frame = frames.get_depth_frame()
 intrin = depth_frame.profile.as_video_stream_profile().intrinsics
 
@@ -67,13 +96,23 @@ filtered = hole_filter.process(filtered)
 depth_image = np.asanyarray(filtered.get_data()).astype(np.float32)
 depth_image = np.apply_along_axis(row_interp, axis=1, arr=depth_image)
 
-# Generate elevation map using saved transform
+# Step 1: generate elevation map
 elevation_map = generate_elevation_map(depth_image, R, T, intrin)
+
+# Step 2: rectify to sandbox bounds
+elevation_map = rectify_depth_with_tag_centers(elevation_map, tag_dict)
+
+# Step 3: zero the floor
 elevation_map -= np.min(elevation_map)
 
-# Save result
-colorized = get_colormap_image(elevation_map)
-cv2.imwrite("depth_colormap.png", colorized)
+# Step 4: clip elevation to percentile bounds (to remove outliers)
+min_elev = np.percentile(elevation_map, 1)
+max_elev = np.percentile(elevation_map, 99)
+elevation_map = np.clip(elevation_map, min_elev, max_elev)
+
+# Step 5: colorize and save
+colored = get_colormap_image(elevation_map)
+cv2.imwrite("depth_colormap.png", colored)
 np.savetxt("depthdata.txt", elevation_map, fmt='%d')
 
 pipe.stop()

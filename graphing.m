@@ -3,11 +3,11 @@ data = fscanf(fileID, '%f');
 fclose(fileID);
 
 totalElements = length(data)
-numColumns = 761;
+numColumns = 505;
 numRows = length(data) / numColumns;
 
 depthMap = reshape(data, [numColumns, numRows])';
-% depthMap = -depthMap;
+depthMap = 1000 - 10*depthMap;
 
 [x, y] = meshgrid(1:numColumns, 1:numRows);
 
