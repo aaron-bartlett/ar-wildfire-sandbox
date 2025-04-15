@@ -38,7 +38,7 @@ def initialize():
         # get depthmap.txt
         os.system("python3 calibration.py")
         # display inital map contours
-        # projector turns on
+        # projector turns on -- TODO: needs to run consistently on the side
         get_height_surface()
         global calibrated
         calibrated = True

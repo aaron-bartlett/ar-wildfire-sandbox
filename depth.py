@@ -278,8 +278,6 @@ def grab_hand_position():
 
 
 def main():
-    # If not already displaying image
-    get_height_surface()    
     grab_hand_position()
         
         
