@@ -25,14 +25,8 @@ def get_height_surface():
     rgb_array = rgb_array.reshape(*array.shape, 3).astype(np.uint8)
     #surface = pygame.Surface((width, height)) 
     #pygame.surfarray.blit_array(surface, np.transpose(rgb_array, (1, 0, 2)))
-
-    pygame.init()
-    os.environ['SDL_VIDEO_CENTERED'] = "1"
-    info = pygame.display.Info()
-    screen_w, screen_h = info.current_w, info.current_h
-    screen = pygame.display.set_mode((screen_w, screen_h), pygame.RESIZABLE)
-    
-    pygame.display.set_caption("Height Surface Viewer")
+    global screen_h, screen_w
+    global screen
     
     height_surface =  pygame.surfarray.make_surface(np.transpose(rgb_array, (1, 0, 2)))
     height_surface = pygame.transform.scale(height_surface, (screen_w, screen_h))
@@ -256,6 +250,15 @@ def grab_hand_position():
             results = hands.process(rect_image)
             hand_detected = results.multi_hand_landmarks is not None
 
+            global screen, screen_h, screen_w
+            pygame.init()
+            os.environ['SDL_VIDEO_CENTERED'] = "1"
+            info = pygame.display.Info()
+            screen_w, screen_h = info.current_w, info.current_h
+            screen = pygame.display.set_mode((screen_w, screen_h), pygame.RESIZABLE)
+            
+            pygame.display.set_caption("Height Surface Viewer")
+            
             if hand_detected and not last_hand_state:
                 print("[INFO] Hands entered frame")
                 get_height_surface()
