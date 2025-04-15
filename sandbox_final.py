@@ -93,7 +93,7 @@ def scan_options():
             return scan_options()
         else:
             print("Starting simulation...")
-            return start_sim()
+            return
     else:
         print("Invalid selection. Please try again.")
         return scan_options()
@@ -111,18 +111,12 @@ def get_height_surface():
     rgb_array = rgb_array.reshape(*array.shape, 3).astype(np.uint8)
     #surface = pygame.Surface((width, height)) 
     #pygame.surfarray.blit_array(surface, np.transpose(rgb_array, (1, 0, 2)))
-
-    pygame.init()
-    os.environ['SDL_VIDEO_CENTERED'] = "1"
-    info = pygame.display.Info()
-    screen_w, screen_h = info.current_w, info.current_h
-    screen = pygame.display.set_mode((screen_w, screen_h), pygame.RESIZABLE)
     
-    pygame.display.set_caption("Height Surface Viewer")
-    
+    global screen_h, screen_w
     height_surface =  pygame.surfarray.make_surface(np.transpose(rgb_array, (1, 0, 2)))
     height_surface = pygame.transform.scale(height_surface, (screen_w, screen_h))
         
+    global screen
     screen.blit(height_surface, (0, 0))
     pygame.display.update()
     clock = pygame.time.Clock()
@@ -132,19 +126,18 @@ def get_height_surface():
             if event.type == pygame.QUIT:
                 break
         clock.tick(60)
-    pygame.quit()
     return
 
 
 def get_black_surface():
 
     array = np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8)
- 
-    pygame.init()
     height_surface =  pygame.surfarray.make_surface(np.transpose(array, (1, 0, 2)))
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Height Surface Viewer")
-    screen.blit(height_surface, (0, 0))
+ 
+    global screen_h, screen_w
+    global screen
+    
+    screen.blit(pygame.transform.scale(height_surface, (screen_w, screen_h)), (0, 0))
     pygame.display.update()
     clock = pygame.time.Clock()
     start = time.time()
@@ -153,7 +146,6 @@ def get_black_surface():
             if event.type == pygame.QUIT:
                 break
         clock.tick(60)
-    pygame.quit()
     return
 
 '''
@@ -244,89 +236,6 @@ def start_sim():
 
     return sim
 
-def run_simulation():
-
-    #global user_input
-    #user_input = False
-
-    sim = create_sim()
-    #input_thread = threading.Thread(target=listen_for_playpause, daemon=True)
-    #input_thread.start()
-
-    for i in range (10):
-        sim.run("5m")
-        print(f"Sim Step {i}")
-        input_flag = input("1: PLAY SIM, 2: ADD MITIGATION, 3: DISPLAY CONTOURS, 4 EXIT\n")
-        if input_flag == "1":
-            sim.run('1h')
-        elif input_flag == "2":
-            mitigation_input = input("Enter Mitigation Type (fireline, scratchline, wetline): ") 
-        
-            if(mitigation_input == "fireline"):
-                mitigation_type = BurnStatus.FIRELINE
-            elif(mitigation_input == "scratchline"):
-                mitigation_type = BurnStatus.SCRATCHLINE
-            elif(mitigation_input == "wetline"):
-                mitigation_type = BurnStatus.WETLINE
-            else:
-                print("Invalid mitigation type")
-                continue
-
-            # GET HxW INPUT ARRAY W 1 FOR LINE 0 FOR NO INPUT
-            line_input = read_line(mitigation_type)
-            line_input_points  = np.argwhere(line_input == 1) # [[row, col]]
-            line_input_points = [tuple(pair) for pair in line_input_points] # [(row, col)]
-            mitigations = [(*coord, mitigation_type) for coord in line_input_points]
-
-            #mitigation_surface = make_line_surface(line_input)
-
-            #sim._blit_surface(mitigation_surface)
-            sim.update_mitigation(mitigations)
-
-        elif input_flag == "3":
-            #row_values = np.linspace(0, 100, WIDTH)
-            #height_array = np.tile(row_values, (HEIGHT, 1))
-            y_coords = np.arange(HEIGHT-1, -1, -1).reshape(-1, 1)  # Height
-            x_coords = np.arange(WIDTH)  # Width
-            height_array = x_coords + y_coords
-            height_surface = get_height_surface(height_array)
-            sim._blit_surface(height_surface)
-
-        else:
-            return sim
-
-        time.sleep(3)
-        ''' TEMPORARILY UNUSED
-        if user_input: # UPDATE WITH A WAY TO PAUSE/PLAY
-            if True: # UPDATE WITH A WAY TO CHOOSE TO ADD A MITIGATION
-                mitigation_input = input("Enter Mitigation Type (fireline, scratchline, wetline): ") 
-                if(mitigation_input == "fireline"):
-                    mitigation_type = BurnStatus.FIRELINE
-                elif(mitigation_input == "scratchline"):
-                    mitigation_type = BurnStatus.SCRATCHLINE
-                elif(mitigation_input == "wetline"):
-                    mitigation_type = BurnStatus.WETLINE
-                else:
-                    print("Invalid mitigation type")
-                    continue
-                mitigations = read_line(mitigation_type)
-                
-            sim.update_mitigation(mitigations)   
-            user_input = False'
-        '''
-
-    #user_input = None
-    return sim
-
-def wait_for_pause():
-    global exit
-    playpause = input("Press Enter to play/pause the simulation or type 'exit' to exit: ").lower()
-    if (playpause == 'exit') | (playpause == 'x'):
-        exit = True
-        global running
-        running = False
-    else:
-        playpause_sim()
 # -------------
 # GUI COMPONENTS
 # -------------
@@ -343,8 +252,18 @@ def wait_for_pause():
 # -------------
 # END REALSENSE COMPONENTS
 # -------------
+pygame.init()
+os.environ['SDL_VIDEO_CENTERED'] = "1"
+info = pygame.display.Info()
+screen_w, screen_h = info.current_w, info.current_h
+screen = pygame.display.set_mode((screen_w, screen_h), pygame.RESIZABLE)
+pygame.display.set_caption("Height Surface Viewer")
 
-sim = initialize()
+initialize()
+
+pygame.quit()
+
+sim = start_sim()
 
 exit = False
 while not exit:
