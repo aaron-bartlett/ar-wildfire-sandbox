@@ -52,7 +52,7 @@ pipe.start(cfg)
 for _ in range(5):
     pipe.wait_for_frames()
 
-model = YOLO("runs/detect/train7/weights/best.pt")
+model = YOLO("runs/detect/train6/weights/best.pt")
 
 
 # Run YOLO object detection.

@@ -60,7 +60,8 @@ for _ in range(5):
 
 print("Importing model")
 
-model = YOLO("runs/detect/train7/weights/best.pt")
+# train6 is latest model running
+model = YOLO("runs/detect/train6/weights/best.pt")
 
 
 # Run YOLO object detection.
