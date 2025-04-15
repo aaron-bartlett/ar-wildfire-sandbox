@@ -4,7 +4,6 @@ import pygame
 import pyrealsense2 as rs
 import mediapipe as mp
 import os
-# from sandbox_final import get_height_surface
 import time
 
 
