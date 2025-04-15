@@ -1,5 +1,8 @@
-tree,0,0
-tree,300,300
-tree,300,0
-fire,100,100
-tree,0,300
+house,126,317
+house,315,196
+house,221,80
+fire,189,265
+fire,372,268
+house,216,186
+tree,84,275
+tree,311,60
