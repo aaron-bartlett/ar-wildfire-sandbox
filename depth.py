@@ -47,20 +47,11 @@ def get_height_surface():
             if event.type == pygame.QUIT:
                 break
         clock.tick(60)
-    pygame.quit()
     return
 
 print("Entered depth.py")
 
-# State Machine
-
-IDLE = 0
-HANDS_PRESENT = 1
-HANDS_REMOVED = 2
-
-# start in IDLE with last state false
-state = IDLE
-last_hand_state = False # not in frame
+last_hand_state = False
 
 
 # grab tag_dict for perspective transforms
@@ -233,13 +224,13 @@ def grab_depth_map():
 
 
 def grab_hand_position():
-    global state
     global last_hand_state
 
     with mp_hands.Hands(
         model_complexity=0,
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5) as hands:
+
         while True:
             frame = pipe.wait_for_frames()
             aligned = rs.align(rs.stream.color).process(frame)
@@ -255,33 +246,15 @@ def grab_hand_position():
             hand_detected = results.multi_hand_landmarks is not None
 
             if hand_detected and not last_hand_state:
-                state = HANDS_PRESENT
                 print("[INFO] Hands entered frame")
+                get_height_surface()
             elif not hand_detected and last_hand_state:
-                state = HANDS_REMOVED
                 print("[INFO] Hands removed from frame")
+                time.sleep(5)
+                grab_depth_map()
+                get_height_surface()
 
             last_hand_state = hand_detected  # update for next loop
-
-            # perform actions based on state
-            if state == IDLE:
-                # get_height_surface()
-                pass
-            elif state == HANDS_PRESENT:
-                # project existing map
-                # get_height_surface()
-                pass
-                # wait for hand removal
-                state = IDLE
-            elif state == HANDS_REMOVED:
-                # store new height map
-                time.sleep(1)
-                grab_depth_map()
-                # show it
-                get_height_surface()
-                # back to waiting
-                state = IDLE
-
 
             # Draw the hand annotations on the image.
             rect_image.flags.writeable = True
@@ -297,7 +270,7 @@ def grab_hand_position():
 
             # Flip the image horizontally for a selfie-view display.
             cv2.imshow('MediaPipe Hands', rect_image)
-            # print("hand_detected: ", hand_detected)
+
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 pipe.stop()
                 pygame.quit()
@@ -306,7 +279,8 @@ def grab_hand_position():
 
 
 def main():
-
+    # If not already displaying image
+    get_height_surface()    
     grab_hand_position()
         
         
