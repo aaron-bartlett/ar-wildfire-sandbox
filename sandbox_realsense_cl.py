@@ -85,9 +85,16 @@ def get_height_surface():
     #pygame.surfarray.blit_array(surface, np.transpose(rgb_array, (1, 0, 2)))
 
     pygame.init()
-    height_surface =  pygame.surfarray.make_surface(np.transpose(rgb_array, (1, 0, 2)))
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    os.environ['SDL_VIDEO_CENTERED'] = "1"
+    info = pygame.display.Info()
+    screen_w, screen_h = info.current_w, info.current_h
+    screen = pygame.display.set_mode((screen_w, screen_h), pygame.RESIZABLE)
+    
     pygame.display.set_caption("Height Surface Viewer")
+    
+    height_surface =  pygame.surfarray.make_surface(np.transpose(rgb_array, (1, 0, 2)))
+    height_surface = pygame.transform.scale(height_surface, (screen_w, screen_h))
+        
     screen.blit(height_surface, (0, 0))
     pygame.display.update()
     clock = pygame.time.Clock()
