@@ -3,9 +3,10 @@ import numpy as np
 import pyrealsense2 as rs
 import torch
 import pickle
+import os
+import mediapipe as mp
 from ultralytics import YOLO
 from calibration import *
-
 
 def get_bounding_box_centers(results):
     centers = []
@@ -53,9 +54,6 @@ for _ in range(5):
 
 model = YOLO("runs/detect/train7/weights/best.pt")
 
-def get_coordinates():
-    return center_x, center_y
-
 
 # Run YOLO object detection.
 def detect_objects(frame):
@@ -91,11 +89,7 @@ def main():
                 text = f"{label} {conf:.2f}"
                 cv2.putText(rect_image, text, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-        # hand detection
-
-
-
-        cv2.imshow('Object Detection', rect_image)
+        cv2.imshow('Object & Hand Detection', rect_image)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

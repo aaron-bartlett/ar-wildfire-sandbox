@@ -1,51 +1,107 @@
-import pygame
 import numpy as np
-import threading
 from simfire.utils.config import Config
 from simfire.sim.simulation import FireSimulation
 from simfire.enums import BurnStatus
 import time
 from scipy.ndimage import zoom
 import cv2
-import pyrealsense2 as rs
-import torch
-from ultralytics import YOLO
-import tkinter as tk
-import threading
+#import pyrealsense2 as rs
+#import torch
+#from ultralytics import YOLO
 import os
+import pygame
 
-HEIGHT = 720
-WIDTH = 1280
+HEIGHT = 378
+WIDTH = 505
 BASE_HEIGHT = 0.
-MAX_HEIGHT = 2500.
+MAX_HEIGHT = 100.
 #Color Constants from Red to Blue
 #COLOR_CONSTANTS = [(0, 0, 255), (0, 150, 255), (0, 255, 255), (0, 255, 150), (0, 255, 0), (150, 255, 0), (255, 255, 0), (255, 150, 0), (255, 0, 0)]
 # Earth Tones
 COLOR_CONSTANTS =  [(180, 160, 140), (180, 150, 100), (150, 150, 70), (130, 150, 70), (80, 130, 50), (40, 110, 70), (30, 100, 80), (30, 70, 100), (10, 20, 80)]
 
-sim = None
 running = False
 calibrated = False
 terrain_scanned = False
 objects_scanned = False
 
-def run_sim_loop():
+def run_sim_loop(sim):
     global running
     while running:
         sim.run('5m')
 
     return
 
-def calibrate():
-    print('calibrate/cancel')
-    btn_Terrain.config(state='normal')
-    btn_Objects.config(state='normal')
+def initialize():
+    if input("Calibrate? (y/n): ").lower() == 'y':
+        # Calibrate system
+        # get depthmap.txt
+        os.system("python3 calibration.py")
+        # display inital map contours
+        # projector turns on
+        get_height_surface()
+        global calibrated
+        calibrated = True
+        return scan_options()
+    else:
+        return initialize()
 
-    #os.system("python calibrate.py")
+def scan_terrain():
+    print('scan_terrain')
+    global terrain_scanned
+    terrain_scanned = True
+    # take the depth in
+    os.system("python3 depth.py")
+    
+    print("ran depth.py")
     return
 
-def get_height_surface(array):
+def scan_objects():
+    print('scan_objects')
+    global objects_scanned
+    objects_scanned = True
 
+    # project black
+    get_black_surface()
+    # run object detection
+    os.system("python3 object.py")
+    # project depth map again
+    get_height_surface()
+
+    return
+
+def scan_options():
+    global calibrated, terrain_scanned, objects_scanned
+    selection = input(f"Scan Terrain ({terrain_scanned}), Scan Objects ({objects_scanned}), Re-Calibrate ({calibrated}), or Start Simulation? (t/o/c/start): ").lower()
+    if selection == 't':
+        scan_terrain()
+        return scan_options()
+    elif selection == 'o':  
+        scan_objects()
+        return scan_options()
+    elif selection == 'c':
+        return initialize()
+    elif (selection == 's') | (selection == 'start'):
+        if not calibrated:
+            print("Please calibrate first.")
+            return scan_options()
+        if not terrain_scanned:
+            print("Please scan terrain first.")
+            return scan_options()
+        if not objects_scanned:
+            print("Please scan objects first.")
+            return scan_options()
+        else:
+            print("Starting simulation...")
+            return start_sim()
+    else:
+        print("Invalid selection. Please try again.")
+        return scan_options()
+    
+
+def get_height_surface():
+
+    array = np.load("./data/depth_camera_input.npy")
     height, width = array.shape
     array = np.clip(array, BASE_HEIGHT, MAX_HEIGHT)
     bins = np.linspace(BASE_HEIGHT, MAX_HEIGHT, num=9)
@@ -55,40 +111,39 @@ def get_height_surface(array):
     rgb_array = rgb_array.reshape(*array.shape, 3).astype(np.uint8)
     #surface = pygame.Surface((width, height)) 
     #pygame.surfarray.blit_array(surface, np.transpose(rgb_array, (1, 0, 2)))
-    return pygame.surfarray.make_surface(np.transpose(rgb_array, (1, 0, 2)))
-
-
-def scan_terrain():
-    print('scan_terrain')
-    global terrain_scanned
-    global objects_scanned
-    terrain_scanned = True
-    if objects_scanned:
-        btn_StartSim.config(state='normal')
-
-    #os.system("python mapping.py")
 
     pygame.init()
-    height_surface = get_height_surface(np.load("./data/depth_camera_input.npy"))
+    height_surface =  pygame.surfarray.make_surface(np.transpose(rgb_array, (1, 0, 2)))
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("Height Surface Viewer")
     screen.blit(height_surface, (0, 0))
     pygame.display.update()
-
+    time.sleep(2)
+    pygame.quit()
     return
 
-def scan_objects():
-    print('scan_objects')
-    global terrain_scanned
-    global objects_scanned
-    objects_scanned = True
-    if terrain_scanned:
-        btn_StartSim.config(state='normal')
 
-    #os.system("python objects.py")
+def get_black_surface():
 
+    array = np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8)
+ 
+    pygame.init()
+    height_surface =  pygame.surfarray.make_surface(np.transpose(array, (1, 0, 2)))
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Height Surface Viewer")
+    screen.blit(height_surface, (0, 0))
+    pygame.display.update()
+    clock = pygame.time.Clock()
+    start = time.time()
+    while time.time() - start < 5:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                break
+        clock.tick(60)
+    pygame.quit()
     return
 
+'''
 def make_line_surface(array): # turns all binary 1's too black
     height, width = array.shape
     
@@ -98,6 +153,7 @@ def make_line_surface(array): # turns all binary 1's too black
     rgb_array[array < 1] = [0, 150, 255] 
     
     return pygame.surfarray.make_surface(rgb_array)
+'''
 
 def read_line(mitigation_type): # take an array turn it into 1's and 0's 
 
@@ -116,29 +172,6 @@ def read_line(mitigation_type): # take an array turn it into 1's and 0's
         line_input[(HEIGHT // 2):(HEIGHT // 2 + 3), :] = 1
     return  np.transpose(line_input)
 
-
-def add_mitigation_choices():
-    print('add_mitigation')
-    btn_Calibrate.grid_remove()
-    btn_Terrain.grid_remove()
-    btn_Objects.grid_remove()
-    btn_Cancel.grid(row=0, column=0, columnspan=3, sticky="nsew", padx=50, pady=5)
-    btn_Burn.grid(row=1, column=0, sticky="nsew", padx=50, pady=5)
-    btn_Scratch.grid(row=1, column=1, sticky="nsew", padx=50, pady=5)
-    btn_Water.grid(row=1, column=2, sticky="nsew", padx=50, pady=5)
-    return
-
-def cancel_mitigation():
-
-    print('calibrate/cancel')
-    btn_Calibrate.grid(row=0, column=0, columnspan=3, sticky="nsew", padx=50, pady=5)
-    btn_Terrain.grid(row=1, column=0, sticky="nsew", padx=50, pady=5)
-    btn_Objects.grid(row=1, column=2, sticky="nsew", padx=50, pady=5)
-    btn_Cancel.grid_remove()
-    btn_Burn.grid_remove()
-    btn_Scratch.grid_remove()
-    btn_Water.grid_remove()
-    return
 
 def add_burnline():
     add_mitigation(BurnStatus.FIRELINE)
@@ -159,44 +192,30 @@ def add_mitigation(mitigation_type):
     line_input_points = [tuple(pair) for pair in line_input_points] # [(row, col)]
     mitigations = [(*coord, mitigation_type) for coord in line_input_points]
 
-    mitigation_surface = make_line_surface(line_input)
+    #mitigation_surface = make_line_surface(line_input)
 
     global sim
-    sim._blit_surface(mitigation_surface)
+    #sim._blit_surface(mitigation_surface)
     sim.update_mitigation(mitigations)
 
 
 def create_sim():
 
-    global sim
     config = Config("configs/camera_config.yml")
-
+    print("configging")
     sim = FireSimulation(config)
 
     sim.rendering = True
 
-    btn_StartSim.grid_remove()
-    btn_EndSim.grid(row=2, column=0, sticky="nsew", padx=50, pady=50)
-    btn_PauseSim.grid(row=2, column=1, sticky="nsew", padx=50, pady=50)
-    btn_AddMit.grid(row=2, column=2, sticky="nsew", padx=50, pady=50)
-    btn_EndSim.config(background='#F00')
-    btn_AddMit['fg'] = '#00F'
-    btn_Calibrate.config(state='disabled')
-    btn_Objects.config(state='disabled')
-    btn_Terrain.config(state='disabled')
-    threading.Thread(target=run_sim_loop, daemon=True).start()
-
-    return
+    return sim
 
 def playpause_sim():
+    
     global running
     if running:
         running = False
-        btn_AddMit.config(state='normal')
     else:
         running = True
-        btn_AddMit.config(state='disabled')
-        threading.Thread(target=run_sim_loop, daemon=True).start()
     print('play/paused')
 
     return
@@ -204,41 +223,12 @@ def playpause_sim():
 def start_sim():
 
     print('start_sim')
-    btn_StartSim.grid_remove()
-    btn_EndSim.grid(row=2, column=0, sticky="nsew", padx=50, pady=50)
-    btn_PauseSim.grid(row=2, column=1, sticky="nsew", padx=50, pady=50)
-    btn_AddMit.grid(row=2, column=2, sticky="nsew", padx=50, pady=50)
-    btn_AddMit.config(state='disabled')
-    btn_EndSim.config(background='#F00')
-    btn_AddMit['fg'] = '#00F'
-    btn_Calibrate.config(state='disabled')
-    btn_Objects.config(state='disabled')
-    btn_Terrain.config(state='disabled')
     
-    global sim
     sim = create_sim()
     
     global running
     running = True
-    threading.Thread(target=run_sim_loop, daemon=True).start()
-    
-    return
 
-def end_sim():
-
-    global running
-    running = False
-    btn_EndSim.grid_remove()
-    btn_PauseSim.grid_remove()
-    btn_AddMit.grid_remove()
-    btn_StartSim.grid(row=2, column=0, columnspan=3, sticky="nsew", padx=50, pady=50)
-    btn_Calibrate.config(state='normal')
-    btn_Objects.config(state='normal')
-    btn_Terrain.config(state='normal')
-    print('end_sim')
-
-    global sim
-    sim.save_gif()
     return sim
 
 def run_simulation():
@@ -275,11 +265,9 @@ def run_simulation():
             line_input_points = [tuple(pair) for pair in line_input_points] # [(row, col)]
             mitigations = [(*coord, mitigation_type) for coord in line_input_points]
 
-            mitigation_surface = make_line_surface(line_input)
+            #mitigation_surface = make_line_surface(line_input)
 
-            sim._blit_surface(mitigation_surface)
-            print(mitigations[-1])
-            time.sleep(2)
+            #sim._blit_surface(mitigation_surface)
             sim.update_mitigation(mitigations)
 
         elif input_flag == "3":
@@ -317,49 +305,18 @@ def run_simulation():
     #user_input = None
     return sim
 
+def wait_for_pause():
+    global exit
+    playpause = input("Press Enter to play/pause the simulation or type 'exit' to exit: ").lower()
+    if (playpause == 'exit') | (playpause == 'x'):
+        exit = True
+        global running
+        running = False
+    else:
+        playpause_sim()
 # -------------
 # GUI COMPONENTS
 # -------------
-
-gui = tk.Tk()
-gui.title("AR Sandbox GUI")
-gui.geometry("1200x800")
-
-gui.grid_rowconfigure(0, weight=1)  
-gui.grid_rowconfigure(1, weight=3) 
-gui.grid_rowconfigure(2, weight=5)  
-
-gui.grid_columnconfigure(0, weight=5)
-gui.grid_columnconfigure(1, weight=5)
-gui.grid_columnconfigure(2, weight=5)
-
-# Top Section Calibrations
-btn_Calibrate = tk.Button(gui, text="Calibrate", font=("Courier New", 20), command=calibrate)
-btn_Terrain = tk.Button(gui, text="Scan Terrain", font=("Courier New", 20), command=scan_terrain)
-btn_Objects = tk.Button(gui, text="Scan Objects", font=("Courier New", 20), command=scan_objects)
-
-# Top Section Mitigations
-btn_Cancel = tk.Button(gui, text="Cancel Mitigation", font=("Courier New", 20), command=cancel_mitigation)
-btn_Water = tk.Button(gui, text="Water Line", font=("Courier New", 20), command=add_wetline)
-btn_Burn = tk.Button(gui, text="Burn Line", font=("Courier New", 20), command=add_burnline)
-btn_Scratch = tk.Button(gui, text="Scratch Line", font=("Courier New", 20), command=add_scratchline)
-
-# Lower Section Start
-btn_StartSim = tk.Button(gui, text="Start Simulation", font=("Courier New", 20), command=start_sim)
-btn_StartSim.config(state='disabled')
-btn_Terrain.config(state='disabled')
-btn_Objects.config(state='disabled')
-
-# Lower Section Controls
-btn_EndSim = tk.Button(gui, text="End Simulation", font=("Courier New", 20), command=end_sim)
-btn_PauseSim = tk.Button(gui, text="Pause Simulation", font=("Courier New", 20), command=playpause_sim)
-btn_AddMit = tk.Button(gui, text="Add Mitigation", font=("Courier New", 20), command=add_mitigation_choices)
-
-
-btn_Calibrate.grid(row=0, column=0, columnspan=3, sticky="nsew", padx=50, pady=5)
-btn_Terrain.grid(row=1, column=0, sticky="nsew", padx=50, pady=5)
-btn_Objects.grid(row=1, column=2, sticky="nsew", padx=50, pady=5)
-btn_StartSim.grid(row=2, column=0, columnspan=3, sticky="nsew", padx=50, pady=50)
 
 # -------------
 # END GUI COMPONENTS
@@ -374,13 +331,33 @@ btn_StartSim.grid(row=2, column=0, columnspan=3, sticky="nsew", padx=50, pady=50
 # END REALSENSE COMPONENTS
 # -------------
 
-#model = YOLO("runs/detect/train3/weights/best.pt")#YOLO('yolov8n.pt') # runs/detect/train/weights/best.pt
+sim = initialize()
 
-#np.save("./data/depth_camera_input.npy", depth_array)
+exit = False
+while not exit:
+    for event in pygame.event.get():
+        print(event.type)
+        if event.type == pygame.QUIT:
+            print('quit')
+            running = False
+            exit = True
 
-# TODO: ADD COORDINATES OF TREES
-coordinates = []
-np.save('./data/tree_coordinates.npy', coordinates)
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_q:
+                running = False
+                exit = True
 
-gui.mainloop()
+            elif event.key == pygame.K_SPACE:
+                if running:
+                    running = False
+                    print('Simulation Paused')
+
+                else:
+                    running = True
+                    print('Simulation Restarted')
+                    
+    if running:
+        sim.run('1m')
+
+sim.save_gif()
 

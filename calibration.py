@@ -37,17 +37,19 @@ def store_tags(tag_dict, filename="april_tags.pkl"):
 def rectify_color_with_tag_centers(color_image, tag_dict):
     if len(tag_dict) < 4:
         raise ValueError("Need all 4 corner tags: 'tl', 'tr', 'bl', 'br'")
-    points = np.array([tag_dict[k]['center'] for k in [ 'tl', 'tr', 'bl', 'br']], dtype=np.float32)
+    
+    points = np.array([tag_dict[k]['center'] for k in ['tl', 'tr', 'bl', 'br']], dtype=np.float32)
     s = points.sum(axis=1)
     diff = np.diff(points, axis=1).flatten()
     ordered_src = np.zeros((4, 2), dtype=np.float32)
-    ordered_src[0] = points[np.argmin(s)]  # Top-left
-    ordered_src[1] = points[np.argmin(diff)]  # Top-right
-    ordered_src[2] = points[np.argmax(s)]  # Bottom-right
-    ordered_src[3] = points[np.argmax(diff)]  # Bottom-left
+    ordered_src[0] = points[np.argmin(s)]      # Top-left
+    ordered_src[1] = points[np.argmin(diff)]   # Top-right
+    ordered_src[2] = points[np.argmax(s)]      # Bottom-right
+    ordered_src[3] = points[np.argmax(diff)]   # Bottom-left
 
-    width = int(np.linalg.norm(ordered_src[0] - ordered_src[1]))
-    height = int(np.linalg.norm(ordered_src[0] - ordered_src[3]))
+    # Fixed output size
+    width = 505
+    height = 378
 
     dst_pts = np.array([
         [0, 0],
@@ -60,21 +62,21 @@ def rectify_color_with_tag_centers(color_image, tag_dict):
     rectified_color = cv2.warpPerspective(color_image, M, (width, height), flags=cv2.INTER_CUBIC)
     return rectified_color
 
-
 def rectify_depth_with_tag_centers(array, tag_dict):
     if len(tag_dict) < 4:
         raise ValueError("Need all 4 corner tags: 'tl', 'tr', 'bl', 'br'")
-    points = np.array([tag_dict[k]['center'] for k in [ 'tl', 'tr', 'bl', 'br']], dtype=np.float32)
+    points = np.array([tag_dict[k]['center'] for k in ['tl', 'tr', 'bl', 'br']], dtype=np.float32)
     s = points.sum(axis=1)
     diff = np.diff(points, axis=1).flatten()
     ordered_src = np.zeros((4, 2), dtype=np.float32)
-    ordered_src[0] = points[np.argmin(s)]  # Top-left
-    ordered_src[1] = points[np.argmin(diff)]  # Top-right
-    ordered_src[2] = points[np.argmax(s)]  # Bottom-right
-    ordered_src[3] = points[np.argmax(diff)]  # Bottom-left
+    ordered_src[0] = points[np.argmin(s)]      # Top-left
+    ordered_src[1] = points[np.argmin(diff)]   # Top-right
+    ordered_src[2] = points[np.argmax(s)]      # Bottom-right
+    ordered_src[3] = points[np.argmax(diff)]   # Bottom-left
 
-    width = int(np.linalg.norm(ordered_src[0] - ordered_src[1]))
-    height = int(np.linalg.norm(ordered_src[0] - ordered_src[3]))
+    # Fixed output resolution
+    width = 505
+    height = 378
 
     dst_pts = np.array([
         [0, 0],
@@ -132,12 +134,26 @@ while True:
     depth_intrin = depth_frame.profile.as_video_stream_profile().intrinsics
 
     # Apply filtering to depth frame
-    filtered = spat_filter.process(depth_frame)
-    filtered = hole_filter.process(filtered)
-    depth_image = np.asanyarray(filtered.get_data()).astype(np.float32)
+    """    filtered = spat_filter.process(depth_frame)
+        filtered = hole_filter.process(filtered)
+        depth_image = np.asanyarray(filtered.get_data()).astype(np.float32)
 
-    #depth_image = np.asanyarray(filtered.get_data()).astype(np.float32)
-    depth_image = np.apply_along_axis(row_interp, axis=1, arr=depth_image)
+        depth_image = np.apply_along_axis(row_interp, axis=1, arr=depth_image)
+    """
+    # Average 5 frames for smoother depth
+    NUM_FRAMES = 5
+    depth_stack = []
+
+    for _ in range(NUM_FRAMES):
+        avg_frames = rs.align(rs.stream.color).process(pipe.wait_for_frames())
+        frame = avg_frames.get_depth_frame()
+        filtered = spat_filter.process(frame)
+        filtered = hole_filter.process(filtered)
+        depth = np.asanyarray(filtered.get_data()).astype(np.float32)
+        depth = np.apply_along_axis(row_interp, axis=1, arr=depth)
+        depth_stack.append(depth)
+
+    depth_image = np.mean(depth_stack, axis=0)
 
 
     print("Depth image min/max:", np.min(depth_image), np.max(depth_image))
@@ -245,8 +261,8 @@ np.savez("calibration_data.npz", R=R, T=T, tag_dict=tag_dict)
 
 # --- Colorize and Save ---
 colored_depth = get_colormap_image(relative_elevation)
-cv2.imwrite("depth_colormap.png", colored_depth)
-np.savetxt("depthdata.txt", relative_elevation, fmt='%d')
+cv2.imwrite("depthColorMap.png", colored_depth)
+np.save("data/depth_camera_input.npy", relative_elevation)
 
 
 # Rectify the color image and save it
