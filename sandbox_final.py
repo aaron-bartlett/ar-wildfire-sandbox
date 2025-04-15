@@ -51,6 +51,7 @@ def scan_terrain():
     global terrain_scanned
     terrain_scanned = True
     # take the depth in
+    # remember the projector is on rn displaying previous depth map
     os.system("python3 depth.py")
     
     print("ran depth.py")
@@ -61,7 +62,8 @@ def scan_objects():
     global objects_scanned
     objects_scanned = True
 
-    # project black
+    # projector turns black -- TODO: needs to run consistently on the side
+    # if model is good enough, change to get_height_surface()
     get_black_surface()
     # run object detection
     os.system("python3 object.py")

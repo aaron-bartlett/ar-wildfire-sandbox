@@ -5,6 +5,8 @@ import pyrealsense2 as rs
 import mediapipe as mp
 import os
 import time
+from collections import deque
+from scipy import ndimage
 
 
 HEIGHT = 378
@@ -44,6 +46,10 @@ def get_height_surface():
 
 print("Entered depth.py")
 
+
+# ---- Some hand detection variables ----
+LEN = 20
+buffer = deque(maxlen=LEN)
 last_hand_state = False
 
 
@@ -104,6 +110,33 @@ def rectify_color_with_tag_centers(color_image, tag_dict):
     M = cv2.getPerspectiveTransform(ordered_src, dst_pts)
     rectified_color = cv2.warpPerspective(color_image, M, (width, height), flags=cv2.INTER_CUBIC)
     return rectified_color
+
+
+def is_hand_in_depth_map(depth_image, outlier_factor=2.0, min_blob_size=50):
+
+    valid_depth = depth_image[depth_image > 0]
+
+    q1 = np.percentile(valid_depth, 25)
+    q3 = np.percentile(valid_depth, 75)
+    iqr = q3 - q1
+    outlier_threshold = q3 + outlier_factor * iqr # higher outlier factor means more tolarent
+
+    outlier_mask = (depth_image > outlier_threshold).astype(np.uint8)
+
+    labeled_mask, num_features = ndimage.label(outlier_mask)
+
+    # temp print
+    cv2.imshow("Outlier Mask", outlier_mask * 255)
+    cv2.imshow("Labeled Blobs", (labeled_mask > 0).astype(np.uint8) * 255)
+
+    for label in range(1, num_features + 1):
+        blob_size = np.sum(labeled_mask == label)
+        if blob_size >= min_blob_size:
+            print(f"[INFO] Hand-like blob detected with size {blob_size}")
+            return True
+
+    return False
+
 
 # -----mediapipe hand detection model initialization----------
 global hand_detected
@@ -225,6 +258,8 @@ def grab_depth_map():
     print("Depth capture and elevation mapping complete.")
     print("Colored elevation map shape:", relative_elevation.shape)  # H x W x 3
 
+    return relative_elevation
+
 
 
 
@@ -249,6 +284,15 @@ def grab_hand_position():
             rect_image = cv2.cvtColor(rect_image, cv2.COLOR_BGR2RGB)
             results = hands.process(rect_image)
             hand_detected = results.multi_hand_landmarks is not None
+            print("hand_detected: ", hand_detected)
+            # now add to buffer
+            buffer.append(hand_detected)
+
+            hand_total = sum(buffer)
+            hands_consistently_detected = hand_total >= 10
+            print("hands_consistently_detected: ", hands_consistently_detected)
+            if len(buffer) > LEN:
+                buffer.pop(0)
 
             global screen, screen_h, screen_w
             pygame.init()
@@ -259,16 +303,27 @@ def grab_hand_position():
             
             pygame.display.set_caption("Height Surface Viewer")
             
-            if hand_detected and not last_hand_state:
+            if hands_consistently_detected and not last_hand_state: # entered state = hand inside and there was no hand inside
                 print("[INFO] Hands entered frame")
-                get_height_surface()
-            elif not hand_detected and last_hand_state:
+                # get_height_surface()
+            elif not hands_consistently_detected and last_hand_state: # removed state = no hand inside and there was a hand inside
                 print("[INFO] Hands removed from frame")
-                time.sleep(5)
-                grab_depth_map()
+                # three seconds to remove hands if needed
+                time.sleep(3)
+                # generate a new depth map without a hand in the way
+                relative_elevation = grab_depth_map()
+                # EXPERIMENTAL - check if the generated map has a hand in it
+                # if is_hand_in_depth_map(relative_elevation):
+                    # grab_depth_map()
+                # if no hand is detected, display (indefinetely) the new mapping
                 get_height_surface()
+            elif not hands_consistently_detected and not last_hand_state: # idle state = no hand inside and there was no hand was inside
+                # get_height_surface() should still be running
+                print("[INFO] In idle state")
 
-            last_hand_state = hand_detected  # update for next loop
+            last_hand_state = hands_consistently_detected  # update for next loop
+            print("last_hand_state: ", last_hand_state)
+
 
             # Draw the hand annotations on the image.
             rect_image.flags.writeable = True

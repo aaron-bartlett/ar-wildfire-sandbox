@@ -102,7 +102,7 @@ def main():
                 text = f"{label} {conf:.2f}"
                 cv2.putText(rect_image, text, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-        cv2.imshow('Object & Hand Detection', rect_image)
+        cv2.imshow('Object Detection', rect_image)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             print("Saving data to final_objects.txt...")
