@@ -981,8 +981,10 @@ class FireSimulation(Simulation):
         if value:
             # Create the Game and switch the internal variable to track if we're
             # currently rendering
+        
             self._game = Game(
                 self.config.area.screen_size,
+                rescale_factor=(2),
                 record=True,
                 show_wind_direction = True,
                 show_wind_magnitude = True
