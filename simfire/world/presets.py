@@ -14,9 +14,10 @@ https://gacc.nifc.gov/oncc/docs/40-Standard%20Fire%20Behavior%20Fuel%20Models.pd
 
 from .parameters import Fuel
 
-CustomGrass = Fuel(w_0=0.5, delta=1.0, M_x=0.12, sigma=2000)
-CustomBrush = Fuel(w_0=0.1, delta=2.0, M_x=0.3, sigma=2000)
-CustomForest = Fuel(w_0=0.1, delta=1.5, M_x=0.5, sigma=2000)
+CustomGrass = Fuel(w_0=0.2, delta=1.0, M_x=0.12, sigma=2000)
+CustomBrush = Fuel(w_0=0.3, delta=2.0, M_x=0.3, sigma=2000)
+CustomForest = Fuel(w_0=0.3, delta=2.5, M_x=0.3, sigma=2000)
+CustomUrban = Fuel(w_0=0.05, delta=1.0, M_x=1.0, sigma=2000)
 
 ShortGrass = Fuel(w_0=0.0340, delta=1.000, M_x=0.1200, sigma=3500)
 

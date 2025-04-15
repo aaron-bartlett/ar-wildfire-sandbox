@@ -38,7 +38,8 @@ from .world.presets import (
     TimberLitterUnderstory,
     CustomGrass,
     CustomBrush,
-    CustomForest
+    CustomForest,
+    CustomUrban
 )
 
 TERRAIN_TEXTURE_PATH: Path = Path(
@@ -198,6 +199,7 @@ FuelModelToFuel = {
     101: CustomGrass,
     102: CustomBrush,
     103: CustomForest,
+    104: CustomUrban,
     -32768: NBNoData,
     -9999: NBNoData,
     32767: NBNoData,
@@ -225,6 +227,7 @@ FuelModelRGB13 = {
     101: [1.0, 1.0, 0.745098039],
     102: [0.77254902, 0.901960784, 0.043137255],
     103: [0.537254902, 0.839215686, 0.266666667],
+    104: [0.5, 0.5, 0.5],
     -32768: [1.0, 1.0, 1.0],
     -9999: [1.0, 1.0, 1.0],
     32767: [1.0, 1.0, 1.0],

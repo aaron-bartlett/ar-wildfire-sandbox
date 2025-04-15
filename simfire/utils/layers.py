@@ -31,7 +31,7 @@ from ..utils.terrain import sin_fuel_func_1d, sin_fuel_func_2d, sin_fuel_func_w0
 from ..world.elevation_functions import ElevationFn
 from ..world.fuel_array_functions import FuelArrayFn
 from ..world.parameters import Fuel
-from ..world.presets import CustomGrass, CustomBrush, CustomForest
+from ..world.presets import CustomGrass, CustomBrush, CustomForest, CustomUrban
 
 log = create_logger(__name__)
 
@@ -972,6 +972,7 @@ class CameraFuelLayer(FuelLayer):
         self.data = self._make_data()
         self.texture = self._load_texture()
         self.image = self._make_image()
+        self.hashable = None
 
     def _make_data(self) -> np.ndarray:
         """
@@ -989,19 +990,25 @@ class CameraFuelLayer(FuelLayer):
         outer_radius = 100
 
         #coordinates = np.load('./data/tree_coordinates.npy')
-        with open(f'./data/object_coords.txt', 'r') as f:
-            line = f.readline().strip()
-            print(line)
-            line = f.readline().strip()
-            print(line)
-            coordinates = ast.literal_eval(line)
+        tree_coordinates = []
+        house_coordinates = []
+        with open(f'./data/final_objects.txt', 'r') as f:
+            for line in f:
+                type_str, x_str, y_str = line.strip().split(",")
+                x, y = int(x_str), int(y_str)
+                if type_str == "tree":
+                    print('tree', y, x)
+                    tree_coordinates.append((y, x))
+                elif type_str == "house":
+                    print('house', y, x)
+                    house_coordinates.append((y, x))
         #coordinates = [tuple(coord) for coord in coordinates]
 
         terrain = np.zeros((self.height, self.width), dtype=int)
     
         yy, xx = np.meshgrid(np.arange(self.height), np.arange(self.width), indexing='ij')
 
-        for (cy, cx) in coordinates:
+        for (cy, cx) in tree_coordinates:
             # Outer circle (radius 10)
             mask_outer = (yy - cy)**2 + (xx - cx)**2 <= outer_radius**2
             terrain[mask_outer] += 1
@@ -1010,14 +1017,29 @@ class CameraFuelLayer(FuelLayer):
             mask_inner = (yy - cy)**2 + (xx - cx)**2 <= inner_radius**2
             terrain[mask_inner] += 1
         
-        fuels = np.full_like(terrain, CustomGrass, dtype=object)
-        fuels[terrain == 1] = CustomBrush 
-        fuels[terrain >= 2] = CustomForest
+        fuels = np.full_like(terrain, 101, dtype=object)
+        fuels[terrain == 1] = 102 
+        fuels[terrain >= 2] = 103
+
+        terrain = np.zeros((self.height, self.width), dtype=int)
+
+        for (cy, cx) in house_coordinates:
+            # Outer circle (radius 10)
+            mask_outer = (yy - cy)**2 + (xx - cx)**2 <= int(outer_radius/2)**2
+            terrain[mask_outer] += 1
+
+            # Inner circle (radius 7) — overlaps with outer
+            mask_inner = (yy - cy)**2 + (xx - cx)**2 <= int(inner_radius/2)**2
+            terrain[mask_inner] += 1
+        
+        fuels[terrain >= 2] = 104
 
         fuels = np.expand_dims(fuels, axis=-1)
         print(f"fuels shape: {fuels.shape}")
-
-        return fuels
+        func = np.vectorize(lambda x: FuelModelToFuel[x])
+        fuel_data = func(fuels)
+        self.hashable = fuels
+        return fuel_data
 
     def _make_image(self) -> np.ndarray:
         """
@@ -1030,14 +1052,14 @@ class CameraFuelLayer(FuelLayer):
         #print(f"image shape: {image.shape}")
 
         # Loop over the high-level tiles (these are not at the pixel level)
+
+        func = np.vectorize(lambda x: tuple(FuelModelRGB13[x]))
+        fuel_data_rgb = func(self.hashable)
+
+        fuel_data_rgb = np.stack(fuel_data_rgb, axis=-1) * 255.0
+
+        return fuel_data_rgb
         
-        for i in range(self.height):
-            for j in range(self.width):
-                # Need these pixel level coordinates to span the correct range
-                updated_texture = self._update_texture_dryness(self.data[i][j][0])
-                image[i, j] = updated_texture
-        
-        return image
 
     def _update_texture_dryness(self, fuel: Fuel) -> np.ndarray:
         """
