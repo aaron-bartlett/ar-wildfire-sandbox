@@ -57,13 +57,14 @@ def rectify_depth_with_tag_centers(array, tag_dict):
     s = points.sum(axis=1)
     diff = np.diff(points, axis=1).flatten()
     ordered_src = np.zeros((4, 2), dtype=np.float32)
-    ordered_src[0] = points[np.argmin(s)]  # Top-left
-    ordered_src[1] = points[np.argmin(diff)]  # Top-right
-    ordered_src[2] = points[np.argmax(s)]  # Bottom-right
-    ordered_src[3] = points[np.argmax(diff)]  # Bottom-left
+    ordered_src[0] = points[np.argmin(s)]      # Top-left
+    ordered_src[1] = points[np.argmin(diff)]   # Top-right
+    ordered_src[2] = points[np.argmax(s)]      # Bottom-right
+    ordered_src[3] = points[np.argmax(diff)]   # Bottom-left
 
-    width = int(np.linalg.norm(ordered_src[0] - ordered_src[1]))
-    height = int(np.linalg.norm(ordered_src[0] - ordered_src[3]))
+    # Fixed output resolution
+    width = 505
+    height = 378
 
     dst_pts = np.array([
         [0, 0],
@@ -91,10 +92,19 @@ depth_frame = frames.get_depth_frame()
 intrin = depth_frame.profile.as_video_stream_profile().intrinsics
 
 # Filter and interpolate
-filtered = spat_filter.process(depth_frame)
-filtered = hole_filter.process(filtered)
-depth_image = np.asanyarray(filtered.get_data()).astype(np.float32)
-depth_image = np.apply_along_axis(row_interp, axis=1, arr=depth_image)
+NUM_FRAMES = 5
+depth_stack = []
+
+for _ in range(NUM_FRAMES):
+    avg_frames = rs.align(rs.stream.color).process(pipe.wait_for_frames())
+    frame = avg_frames.get_depth_frame()
+    filtered = spat_filter.process(frame)
+    filtered = hole_filter.process(filtered)
+    depth = np.asanyarray(filtered.get_data()).astype(np.float32)
+    depth = np.apply_along_axis(row_interp, axis=1, arr=depth)
+    depth_stack.append(depth)
+
+depth_image = np.mean(depth_stack, axis=0)
 
 # Step 1: generate elevation map
 elevation_map = generate_elevation_map(depth_image, R, T, intrin)
@@ -117,3 +127,4 @@ np.savetxt("depthdata.txt", elevation_map, fmt='%d')
 
 pipe.stop()
 print("Depth capture and elevation mapping complete.")
+print("Colored elevation map shape:", elevation_map.shape)  # H x W x 3
