@@ -178,11 +178,11 @@ def rectify_depth_with_tag_centers(array, tag_dict):
 
 def get_colormap_image(array, colormap=cv2.COLORMAP_TURBO):
     array = np.nan_to_num(array, nan=0.0, posinf=0.0, neginf=0.0)
-    
-    # Clip extremes before visualizing
-    array = np.clip(array, 0, 200)  # adjust as needed
-
-    norm = cv2.normalize(array, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+    valid = array[array > 0]
+    min_val = np.percentile(valid, 1)
+    max_val = np.percentile(valid, 99)
+    array = np.clip(array, min_val, max_val)
+    norm = ((array - min_val) / (max_val - min_val) * 255).astype(np.uint8)
     return cv2.applyColorMap(norm, colormap)
 
 # --- Main Capture ---
@@ -200,24 +200,36 @@ def grab_depth_map():
     # Step 1: generate elevation map
     elevation_map = generate_elevation_map(depth_image, R, T, intrin)
 
-    # Step 2: rectify to sandbox bounds
-    elevation_map = rectify_depth_with_tag_centers(elevation_map, tag_dict)
 
-    # Step 3: zero the floor
-    elevation_map -= np.min(elevation_map)
+    # Step 2: compute average AprilTag height
+    tag_heights = []
+    for key in ['tl', 'tr', 'bl', 'br']:
+        x, y = tag_dict[key]['center']
+        col = int(round(x))
+        row = int(round(y))
+        z = depth_image[row, col]
+        if z != 0:
+            P_cam = deproject_depth_point(intrin, col, row, z)
+            P_box = R @ P_cam + T
+            tag_heights.append(P_box[2])
 
-    # Step 4: clip elevation to percentile bounds (to remove outliers)
-    min_elev = np.percentile(elevation_map, 1)
-    max_elev = np.percentile(elevation_map, 99)
-    elevation_map = np.clip(elevation_map, min_elev, max_elev)
+    avg_tag_height = np.mean(tag_heights)
+
+    # Step 3: normalize using your formula
+    elevation_map = elevation_map - avg_tag_height
+    relative_elevation = 1000 - (elevation_map * 10)
+
+    # Step 4: rectify and clip
+    relative_elevation = rectify_depth_with_tag_centers(relative_elevation, tag_dict)
+    relative_elevation = np.clip(relative_elevation, 0, 2000)
 
     # Step 5: colorize and save
-    colored = get_colormap_image(elevation_map)
+    colored = get_colormap_image(relative_elevation)
     cv2.imwrite("depth_colormap.png", colored)
-    np.save("data/depth_camera_input.npy", elevation_map)
+    np.save("data/depth_camera_input.npy", relative_elevation)
 
     print("Depth capture and elevation mapping complete.")
-    print("Colored elevation map shape:", elevation_map.shape)  # H x W x 3
+    print("Colored elevation map shape:", relative_elevation.shape)  # H x W x 3
 
 
 
