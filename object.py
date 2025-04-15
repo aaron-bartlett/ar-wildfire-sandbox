@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import pyrealsense2 as rs
 import torch
-import os
 from ultralytics import YOLO
 
 print("Entered object.py")
@@ -86,7 +85,6 @@ def main():
         # object detection
         print("Detecting objects...")
         results = detect_objects(rect_image)
-        print("grabbed results: ", results)
         for result in results:
             boxes = result.boxes.xyxy.cpu().numpy()
             boxes_conf = result.boxes.conf.cpu().numpy()
@@ -106,6 +104,7 @@ def main():
         cv2.imshow('Object & Hand Detection', rect_image)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
+            print("Saving data to final_objects.txt...")
             with open("data/final_objects.txt", "w") as f:
                 for result in results:
                     boxes = result.boxes.xyxy.cpu().numpy()
