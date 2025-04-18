@@ -5,12 +5,13 @@ import pyrealsense2 as rs
 import mediapipe as mp
 import os
 import time
+from collections import deque
 
 
 HEIGHT = 378
 WIDTH = 505
 BASE_HEIGHT = 0.
-MAX_HEIGHT = 100.
+MAX_HEIGHT = 200.
 COLOR_CONSTANTS =  [(180, 160, 140), (180, 150, 100), (150, 150, 70), (130, 150, 70), (80, 130, 50), (40, 110, 70), (30, 100, 80), (30, 70, 100), (10, 20, 80)]
 
 
@@ -20,8 +21,10 @@ class Depth():
         print("Entered depth.py")
         self.pygame_screen = pygame_screen
 
+        # ---- Some hand detection variables ----
+        self.LEN = 60
+        self.buffer = deque(maxlen=self.LEN)
         self.last_hand_state = False
-
 
         # grab tag_dict for perspective transforms
         data = np.load("calibration_data.npz", allow_pickle=True)
@@ -118,12 +121,8 @@ class Depth():
 
     # -----mediapipe hand detection model initialization----------
 
-
-    def hands_in_frame(self):
-        return self.hand_detected
-
     # --- Utility Functions ---
-    def row_interp(row):
+    def row_interp(self, row):
         row = row.astype(np.float32)
         mask = row == 0
         if np.all(mask):
@@ -187,19 +186,33 @@ class Depth():
 
     # --- Main Capture ---
     def grab_depth_map(self):
+        NUM_FRAMES = 30 
+        depth_stack = []
+
+        for _ in range(NUM_FRAMES):
+            avg_frames = self.align.process(self.pipe.wait_for_frames())
+            frame = avg_frames.get_depth_frame()
+            intrin = frame.profile.as_video_stream_profile().intrinsics
+            filtered = self.spat_filter.process(frame)
+            filtered = self.hole_filter.process(filtered)
+            depth_image = np.asanyarray(filtered.get_data()).astype(np.float32)
+            depth_image = np.apply_along_axis(self.row_interp, axis=1, arr=depth_image)
+            depth_stack.append(depth_image)
+        elevation_map = np.mean(depth_stack,axis=0)
     
-        frames = self.align.process(self.pipe.wait_for_frames())
-        depth_frame = frames.get_depth_frame()
-        intrin = depth_frame.profile.as_video_stream_profile().intrinsics
+        """        frames = self.align.process(self.pipe.wait_for_frames())
+                depth_frame = frames.get_depth_frame()
+                intrin = depth_frame.profile.as_video_stream_profile().intrinsics
 
-        # Filter and interpolate
-        filtered = self.spat_filter.process(depth_frame)
-        filtered = self.hole_filter.process(filtered)
-        depth_image = np.asanyarray(filtered.get_data()).astype(np.float32)
-        depth_image = np.apply_along_axis(self.row_interp, axis=1, arr=depth_image)
+                # Filter and interpolate
+                filtered = self.spat_filter.process(depth_frame)depth_
+                filtered = self.hole_filter.process(filtered)
+                depth_image = np.asanyarray(filtered.get_data()).astype(np.float32)
+                depth_image = np.apply_along_axis(self.row_interp, axis=1, arr=depth_image)
 
+        """      
         # Step 1: generate elevation map
-        elevation_map = self.generate_elevation_map(depth_image, self.R, self.T, intrin)
+        elevation_map = self.generate_elevation_map(elevation_map, self.R, self.T, intrin)
 
 
         # Step 2: compute average AprilTag height
@@ -218,16 +231,26 @@ class Depth():
 
         # Step 3: normalize using your formula
         elevation_map = elevation_map - avg_tag_height
-        relative_elevation = 1000 - (elevation_map * 10)
 
         # Step 4: rectify and clip
-        relative_elevation = self.rectify_depth_with_tag_centers(relative_elevation, self.tag_dict)
-        relative_elevation = np.clip(relative_elevation, 0, 2000)
+        relative_elevation = self.rectify_depth_with_tag_centers(elevation_map, self.tag_dict)
+        relative_elevation -= np.min(relative_elevation)
+
+        # Clip out crazy stuff (e.g., fingers, trash, spikes)
+        # Analyze actual elevation range
+
+
+        min_elev = np.percentile(relative_elevation, 1)
+        max_elev = np.percentile(relative_elevation, 99)
+
+        # Clip only extreme outliers
+        relative_elevation = np.clip(relative_elevation, min_elev, max_elev)
 
         # Step 5: colorize and save
         colored = self.get_colormap_image(relative_elevation)
         cv2.imwrite("depth_colormap.png", colored)
         np.save("data/depth_camera_input.npy", relative_elevation)
+        np.savetxt('depthdata.txt', relative_elevation, fmt='%.2f')
 
         print("Depth capture and elevation mapping complete.")
         print("Colored elevation map shape:", relative_elevation.shape)  # H x W x 3
@@ -235,7 +258,6 @@ class Depth():
         return relative_elevation
 
     def grab_hand_position(self):
-        global last_hand_state
 
         with self.mp_hands.Hands(
             model_complexity=0,
@@ -254,9 +276,17 @@ class Depth():
                 rect_image.flags.writeable = False
                 rect_image = cv2.cvtColor(rect_image, cv2.COLOR_BGR2RGB)
                 results = hands.process(rect_image)
-                self.hand_detected = results.multi_hand_landmarks is not None
-
+                hand_detected = results.multi_hand_landmarks is not None
+                print("hand_detected: ", hand_detected)
+                # now add to buffer
+                self.buffer.append(hand_detected)
                 #global screen, screen_h, screen_w
+
+                hand_total = sum(self.buffer)
+                hands_consistently_detected = hand_total >= 10
+                print("hands_consistently_detected: ", hands_consistently_detected)
+                if len(self.buffer) > self.LEN:
+                    self.buffer.pop(0)
                 
                 '''
                 pygame.init()
@@ -268,21 +298,31 @@ class Depth():
                 pygame.display.set_caption("Height Surface Viewer")
                 '''
                 
-                if self.hand_detected and not last_hand_state:
+                if hands_consistently_detected and not self.last_hand_state: # entered state = hand inside and there was no hand inside
                     print("[INFO] Hands entered frame")
-                    self.get_height_surface()
-                elif not self.hand_detected and last_hand_state:
+                    # get_height_surface()
+                elif not hands_consistently_detected and self.last_hand_state: # removed state = no hand inside and there was a hand inside
                     print("[INFO] Hands removed from frame")
-                    time.sleep(5)
-                    self.grab_depth_map()
-                    self.get_height_surface()
+                    # three seconds to remove hands if needed
+                    time.sleep(3)
+                    # generate a new depth map without a hand in the way
+                    relative_elevation = self.grab_depth_map()
+                    # EXPERIMENTAL - check if the generated map has a hand in it
+                    # if is_hand_in_depth_map(relative_elevation):
+                        # grab_depth_map()
+                    # if no hand is detected, display (indefinetely) the new mapping
+                    self.get_height_surface(self.pygame_screen)
+                elif not hands_consistently_detected and not self.last_hand_state: # idle state = no hand inside and there was no hand was inside
+                    # get_height_surface() should still be running
+                    print("[INFO] In idle state")
 
-                last_hand_state = self.hand_detected  # update for next loop
+                self.last_hand_state = hands_consistently_detected  # update for next loop
+                print("last_hand_state: ", self.last_hand_state)
 
                 # Draw the hand annotations on the image.
                 rect_image.flags.writeable = True
                 rect_image = cv2.cvtColor(rect_image, cv2.COLOR_RGB2BGR)
-                if self.hand_detected:
+                if hand_detected:
                     for hand_landmarks in results.multi_hand_landmarks:
                         self.mp_drawing.draw_landmarks(
                             rect_image,

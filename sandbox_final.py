@@ -16,7 +16,7 @@ from depth import Depth
 HEIGHT = 378
 WIDTH = 505
 BASE_HEIGHT = 0.
-MAX_HEIGHT = 100.
+MAX_HEIGHT = 200.
 #Color Constants from Red to Blue
 #COLOR_CONSTANTS = [(0, 0, 255), (0, 150, 255), (0, 255, 255), (0, 255, 150), (0, 255, 0), (150, 255, 0), (255, 255, 0), (255, 150, 0), (255, 0, 0)]
 # Earth Tones
@@ -261,7 +261,7 @@ pygame.init()
 os.environ['SDL_VIDEO_CENTERED'] = "1"
 info = pygame.display.Info()
 screen_w, screen_h = info.current_w, info.current_h
-screen = pygame.display.set_mode((screen_w, screen_h), pygame.RESIZABLE)
+screen = pygame.display.set_mode((screen_w, screen_h), pygame.FULLSCREEN)
 pygame.display.set_caption("Height Surface Viewer")
 
 initialize()
