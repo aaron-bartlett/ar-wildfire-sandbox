@@ -44,43 +44,49 @@ def get_height_surface():
         clock.tick(60)
     return
 
-print("Entered depth.py")
+def initialize_depth():
+
+    print("Entered depth.py")
+
+    # ---- Some hand detection variables ----
+    LEN = 20
+    buffer = deque(maxlen=LEN)
+    last_hand_state = False
 
 
-# ---- Some hand detection variables ----
-LEN = 20
-buffer = deque(maxlen=LEN)
-last_hand_state = False
+    # grab tag_dict for perspective transforms
+    data = np.load("calibration_data.npz", allow_pickle=True)
+    R = data["R"]
+    T = data["T"]
+    tag_dict = data["tag_dict"].item()
 
 
-# grab tag_dict for perspective transforms
-data = np.load("calibration_data.npz", allow_pickle=True)
-R = data["R"]
-T = data["T"]
-tag_dict = data["tag_dict"].item()
+    # realsense initialization
+    context = rs.context()
+    if len(context.devices) == 0:
+        raise RuntimeError("No Realsense device detected.")
 
+    pipe = rs.pipeline()
+    cfg = rs.config()
 
-# realsense initialization
-context = rs.context()
-if len(context.devices) == 0:
-    raise RuntimeError("No Realsense device detected.")
+    cfg.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 30)
+    cfg.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 30)
 
-pipe = rs.pipeline()
-cfg = rs.config()
+    pipe.start(cfg)
 
-cfg.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 30)
-cfg.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 30)
+    align = rs.align(rs.stream.color)
+    for _ in range(5):
+        align.process(pipe.wait_for_frames())  # Skip startup noise
 
-pipe.start(cfg)
+    spat_filter = rs.spatial_filter()
+    hole_filter = rs.hole_filling_filter()
+    hole_filter.set_option(rs.option.holes_fill, 2)
 
-align = rs.align(rs.stream.color)
-for _ in range(5):
-    align.process(pipe.wait_for_frames())  # Skip startup noise
+    mp_drawing = mp.solutions.drawing_utils
+    mp_drawing_styles = mp.solutions.drawing_styles
+    mp_hands = mp.solutions.hands
 
-spat_filter = rs.spatial_filter()
-hole_filter = rs.hole_filling_filter()
-hole_filter.set_option(rs.option.holes_fill, 2)
-
+    return 
 
 # retification function for perspective transforms
 def rectify_color_with_tag_centers(color_image, tag_dict):
@@ -140,10 +146,6 @@ def is_hand_in_depth_map(depth_image, outlier_factor=2.0, min_blob_size=50):
 
 # -----mediapipe hand detection model initialization----------
 global hand_detected
-
-mp_drawing = mp.solutions.drawing_utils
-mp_drawing_styles = mp.solutions.drawing_styles
-mp_hands = mp.solutions.hands
 
 
 def hands_in_frame():
@@ -263,7 +265,7 @@ def grab_depth_map():
 
 
 
-def grab_hand_position():
+def grab_hand_position(pygame_screen):
     global last_hand_state
 
     with mp_hands.Hands(
@@ -294,6 +296,7 @@ def grab_hand_position():
             if len(buffer) > LEN:
                 buffer.pop(0)
 
+            '''
             global screen, screen_h, screen_w
             pygame.init()
             os.environ['SDL_VIDEO_CENTERED'] = "1"
@@ -302,6 +305,7 @@ def grab_hand_position():
             screen = pygame.display.set_mode((screen_w, screen_h), pygame.RESIZABLE)
             
             pygame.display.set_caption("Height Surface Viewer")
+            '''
             
             if hands_consistently_detected and not last_hand_state: # entered state = hand inside and there was no hand inside
                 print("[INFO] Hands entered frame")
@@ -316,7 +320,7 @@ def grab_hand_position():
                 # if is_hand_in_depth_map(relative_elevation):
                     # grab_depth_map()
                 # if no hand is detected, display (indefinetely) the new mapping
-                get_height_surface()
+                get_height_surface(pygame_screen)
             elif not hands_consistently_detected and not last_hand_state: # idle state = no hand inside and there was no hand was inside
                 # get_height_surface() should still be running
                 print("[INFO] In idle state")
@@ -342,7 +346,7 @@ def grab_hand_position():
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 pipe.stop()
-                pygame.quit()
+                #pygame.quit()
                 print("Hand tracking is complete")
                 break
 
