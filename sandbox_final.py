@@ -11,6 +11,8 @@ import cv2
 import os
 import pygame
 
+from depth import Depth
+
 HEIGHT = 378
 WIDTH = 505
 BASE_HEIGHT = 0.
@@ -50,9 +52,11 @@ def scan_terrain():
     print('scan_terrain')
     global terrain_scanned
     terrain_scanned = True
+    global screen
     # take the depth in
-    # remember the projector is on rn displaying previous depth map
-    os.system("python3 depth.py")
+    depth = Depth(screen)
+    depth.grab_hand_position()
+    #os.system("python3 depth.py")
     
     print("ran depth.py")
     return
@@ -62,8 +66,7 @@ def scan_objects():
     global objects_scanned
     objects_scanned = True
 
-    # projector turns black -- TODO: needs to run consistently on the side
-    # if model is good enough, change to get_height_surface()
+    # project black
     get_black_surface()
     # run object detection
     os.system("python3 object.py")
