@@ -99,6 +99,7 @@ def main():
 
                 ### think about adding thresholds for the bounding boxes to reduce the number of false positives
 
+                #text = f"{label} {x1} {x2} {y1} {y2} {conf:.2f}"
                 text = f"{label} {conf:.2f}"
                 cv2.putText(rect_image, text, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
@@ -116,6 +117,7 @@ def main():
                         label = model.names[cls]
                         center_x = (x1 + x2) // 2
                         center_y = (y1 + y2) // 2
+                        center_y = int( float(center_y - 50) * 378 / 328)
                         f.write(f"{label},{center_x},{center_y}\n")
             break
 

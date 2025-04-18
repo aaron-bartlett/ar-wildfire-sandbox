@@ -7,6 +7,7 @@ from typing import List, Optional, Sequence, Tuple, Union
 import numpy as np
 import pygame
 from PIL import Image
+import os
 
 from ..enums import BurnStatus, GameStatus
 from ..utils.log import create_logger
@@ -15,6 +16,9 @@ from .image import load_image
 from .sprites import Agent, Fire, FireLine, ScratchLine, Terrain, WetLine
 
 log = create_logger(__name__)
+
+os.environ['SDL_VIDEO_WINDOW_POS'] = '2600,0'
+
 
 
 class Game:
@@ -68,6 +72,8 @@ class Game:
         self.background: Optional[pygame.surface.Surface] = None
         if not self.headless:
             pygame.init()
+            os.environ['SDL_VIDEO_CENTERED'] = "1"
+
             # self.screen is for drawing all backgrounds/sprites at the simulation's scale
             # self.display_screen is for actually displaying the simulation to the user
             # These can have different sizes to do potential rescaling
@@ -76,11 +82,16 @@ class Game:
                 #self.display_screen = pygame.display.set_mode(screen_size)
             else:
                 rescale_size = (
-                    self.screen_size[1] * self.rescale_factor,
-                    self.screen_size[0] * self.rescale_factor,
+                    int(self.screen_size[1] * self.rescale_factor),
+                    int(self.screen_size[0] * self.rescale_factor)
                 )
-                self.display_screen = pygame.display.set_mode(rescale_size)
+                #self.display_screen = pygame.display.set_mode(rescale_size)
+                self.display_screen = pygame.display.set_mode((1200, 800), pygame.RESIZABLE)
             self.screen = pygame.Surface((screen_size[1], screen_size[0]))
+
+            print(self.screen.get_size())
+            print(self.rescale_factor)
+            #self.screen = pygame.Surface((1200,800))
             pygame.display.set_caption("SimFire")
             with resources.path("simfire.utils.assets", "fireline_logo.png") as path:
                 fireline_logo_path = path

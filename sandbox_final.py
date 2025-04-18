@@ -27,6 +27,8 @@ calibrated = False
 terrain_scanned = False
 objects_scanned = False
 
+os.environ['SDL_VIDEO_WINDOW_POS'] = '2600,0'
+
 def run_sim_loop(sim):
     global running
     while running:
@@ -258,10 +260,12 @@ def start_sim():
 # END REALSENSE COMPONENTS
 # -------------
 pygame.init()
-os.environ['SDL_VIDEO_CENTERED'] = "1"
-info = pygame.display.Info()
-screen_w, screen_h = info.current_w, info.current_h
-screen = pygame.display.set_mode((screen_w, screen_h), pygame.FULLSCREEN)
+#os.environ['SDL_VIDEO_CENTERED'] = "1"
+#info = pygame.display.Info()
+#screen_w, screen_h = info.current_w, info.current_h
+screen_h = 800
+screen_w = 1200
+screen = pygame.display.set_mode((screen_w, screen_h), pygame.RESIZABLE)
 pygame.display.set_caption("Height Surface Viewer")
 
 initialize()

@@ -304,7 +304,7 @@ class Depth():
                 elif not hands_consistently_detected and self.last_hand_state: # removed state = no hand inside and there was a hand inside
                     print("[INFO] Hands removed from frame")
                     # three seconds to remove hands if needed
-                    time.sleep(3)
+                    #time.sleep(1)
                     # generate a new depth map without a hand in the way
                     relative_elevation = self.grab_depth_map()
                     # EXPERIMENTAL - check if the generated map has a hand in it

@@ -71,7 +71,7 @@ class DisplayConfig:
         self.agent_size = int(self.agent_size)
         if self.rescale_factor is not None:
             try:
-                self.rescale_factor = int(self.rescale_factor)
+                self.rescale_factor = float(self.rescale_factor)
             except ValueError:
                 if isinstance(self.rescale_factor, str):
                     if self.rescale_factor.upper() == "NONE":
