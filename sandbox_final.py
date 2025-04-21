@@ -220,7 +220,7 @@ def add_mitigation(mitigation_type):
     sim.update_mitigation(mitigations)
 
 def set_wind():
-    with open("camera_config.yml", "r") as f:
+    with open("./configs/camera_config.yml", "r") as f:
         config = yaml.safe_load(f)
 
     # Modify the nested value
@@ -228,14 +228,14 @@ def set_wind():
     config['wind']['simple']['speed'] = input("Enter wind speed: ")
 
     # Write it back to the same file (or a new one)
-    with open("camera_config.yml", "w") as f:
+    with open("./configs/camera_config.yml", "w") as f:
         yaml.dump(config, f, default_flow_style=False)
 
     return
 
 def create_sim():
 
-    config = Config("configs/camera_config.yml")
+    config = Config("./configs/camera_config.yml")
     print("configging")
     sim = FireSimulation(config)
 
@@ -300,10 +300,11 @@ if input('Change Wind Direction (y/n): ').lower() == 'y':
 sim = start_sim()
 
 exit = False
+minutes_elapsed = 0
 
 while not exit:
     for event in pygame.event.get():
-        print(event.type)
+        #print(event.type)
         if event.type == pygame.QUIT:
             print('quit')
             running = False
@@ -325,6 +326,8 @@ while not exit:
                     
     if running:
         sim.run('1m')
+        minutes_elapsed += 1
+        print(f"{minutes_elapsed} Minutes Elapsed")
 
 sim.save_gif()
 
