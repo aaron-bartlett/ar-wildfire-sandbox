@@ -31,7 +31,7 @@ from ..utils.terrain import sin_fuel_func_1d, sin_fuel_func_2d, sin_fuel_func_w0
 from ..world.elevation_functions import ElevationFn
 from ..world.fuel_array_functions import FuelArrayFn
 from ..world.parameters import Fuel
-from ..world.presets import CustomGrass, CustomBrush, CustomForest, CustomUrban
+from ..world.presets import CustomGrass, CustomBrush, CustomForest, CustomUrban, NBWater
 
 log = create_logger(__name__)
 
@@ -641,7 +641,7 @@ class ManualTopographyLayer(TopographyLayer):
         """
  
         # Expand third dimension to align with data layers
-        elevations = np.expand_dims(elevation_grid, axis=-1)
+        elevations = np.expand_dims((elevation_grid * 10), axis=-1)
         #print(f"elevations shape: {elevations.shape}")
 
         return elevations
@@ -986,8 +986,8 @@ class CameraFuelLayer(FuelLayer):
             A numpy array containing the fuel data
         """
 
-        inner_radius = 70
-        outer_radius = 100
+        inner_radius = 40
+        outer_radius = 70
 
         #coordinates = np.load('./data/tree_coordinates.npy')
         tree_coordinates = []
@@ -1033,6 +1033,15 @@ class CameraFuelLayer(FuelLayer):
             terrain[mask_inner] += 1
         
         fuels[terrain >= 2] = 104
+
+        base_ht = 0.
+        max_ht = 2000.
+        topo_grid = np.load('./data/depth_camera_input.npy')
+        topo_grid = np.clip(topo_grid, base_ht, max_ht)
+        bins = np.linspace(base_ht, max_ht, num=9)
+        categories = np.digitize(topo_grid, bins) - 1 
+        fuels[categories == 0] = 98
+        print(categories[0:10, 0:10])
 
         fuels = np.expand_dims(fuels, axis=-1)
         print(f"fuels shape: {fuels.shape}")

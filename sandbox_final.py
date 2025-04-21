@@ -10,6 +10,7 @@ import cv2
 #from ultralytics import YOLO
 import os
 import pygame
+import yaml
 
 from depth import Depth
 
@@ -37,14 +38,18 @@ def run_sim_loop(sim):
     return
 
 def initialize():
-    if input("Calibrate? (y/n): ").lower() == 'y':
+    calibrate_input = input("Calibrate? (y/n/skip): ").lower()
+    global calibrated
+    if calibrate_input == 'y':
         # Calibrate system
         # get depthmap.txt
         os.system("python3 calibration.py")
         # display inital map contours
         # projector turns on -- TODO: needs to run consistently on the side
         get_height_surface()
-        global calibrated
+        calibrated = True
+        return scan_options()
+    elif calibrate_input == 'skip':
         calibrated = True
         return scan_options()
     else:
@@ -79,7 +84,7 @@ def scan_objects():
 
 def scan_options():
     global calibrated, terrain_scanned, objects_scanned
-    selection = input(f"Scan Terrain ({terrain_scanned}), Scan Objects ({objects_scanned}), Re-Calibrate ({calibrated}), or Start Simulation? (t/o/c/start): ").lower()
+    selection = input(f"Scan Terrain ({terrain_scanned}), Scan Objects ({objects_scanned}), Re-Calibrate ({calibrated}), or Start Simulation? (t/o/c/s/skip): ").lower()
     if selection == 't':
         scan_terrain()
         return scan_options()
@@ -88,6 +93,10 @@ def scan_options():
         return scan_options()
     elif selection == 'c':
         return initialize()
+    elif (selection == 'skip'):
+        terrain_scanned = True
+        objects_scanned = True
+        return
     elif (selection == 's') | (selection == 'start'):
         if not calibrated:
             print("Please calibrate first.")
@@ -210,6 +219,19 @@ def add_mitigation(mitigation_type):
     #sim._blit_surface(mitigation_surface)
     sim.update_mitigation(mitigations)
 
+def set_wind():
+    with open("camera_config.yml", "r") as f:
+        config = yaml.safe_load(f)
+
+    # Modify the nested value
+    config['wind']['simple']['direction'] = input("Enter wind direction (North=0, East=90, South=180, West=270): ")
+    config['wind']['simple']['speed'] = input("Enter wind speed: ")
+
+    # Write it back to the same file (or a new one)
+    with open("camera_config.yml", "w") as f:
+        yaml.dump(config, f, default_flow_style=False)
+
+    return
 
 def create_sim():
 
@@ -271,6 +293,9 @@ pygame.display.set_caption("Height Surface Viewer")
 initialize()
 
 pygame.quit()
+
+if input('Change Wind Direction (y/n): ').lower() == 'y':
+    set_wind()
 
 sim = start_sim()
 
