@@ -48,7 +48,7 @@ def initialize():
         calibrated = True
         return scan_options()
     else:
-        return initialize()
+        return None
 
 def scan_terrain():
     print('scan_terrain')
@@ -263,8 +263,8 @@ pygame.init()
 #os.environ['SDL_VIDEO_CENTERED'] = "1"
 #info = pygame.display.Info()
 #screen_w, screen_h = info.current_w, info.current_h
-screen_h = 800
-screen_w = 1200
+screen_h = 768
+screen_w = 1024
 screen = pygame.display.set_mode((screen_w, screen_h), pygame.RESIZABLE)
 pygame.display.set_caption("Height Surface Viewer")
 

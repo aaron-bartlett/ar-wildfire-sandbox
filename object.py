@@ -117,8 +117,10 @@ def main():
                         label = model.names[cls]
                         center_x = (x1 + x2) // 2
                         center_y = (y1 + y2) // 2
-                        center_y = int( float(center_y - 50) * 378 / 328)
-                        f.write(f"{label},{center_x},{center_y}\n")
+                        #center_y = int( float(center_y - 50) * 378 / 328)
+                        #center_y = max(min(int(1.1 * center_y - 30), 370), 8)
+                        #f.write(f"{label},{center_x},{center_y} {int(1.1 * center_y - 30)} {int(1.2 * center_y - 70)}\n")
+                        f.write(f"{label}, {center_x}, {center_y}\n")
             break
 
     pipe.stop()

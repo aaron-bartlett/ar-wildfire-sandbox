@@ -11,12 +11,10 @@ import cv2
 import os
 import pygame
 
-from depth import Depth
-
 HEIGHT = 378
 WIDTH = 505
 BASE_HEIGHT = 0.
-MAX_HEIGHT = 200.
+MAX_HEIGHT = 100.
 #Color Constants from Red to Blue
 #COLOR_CONSTANTS = [(0, 0, 255), (0, 150, 255), (0, 255, 255), (0, 255, 150), (0, 255, 0), (150, 255, 0), (255, 255, 0), (255, 150, 0), (255, 0, 0)]
 # Earth Tones
@@ -26,8 +24,6 @@ running = False
 calibrated = False
 terrain_scanned = False
 objects_scanned = False
-
-os.environ['SDL_VIDEO_WINDOW_POS'] = '2560,0'
 
 def run_sim_loop(sim):
     global running
@@ -54,11 +50,9 @@ def scan_terrain():
     print('scan_terrain')
     global terrain_scanned
     terrain_scanned = True
-    global screen
     # take the depth in
-    depth = Depth(screen)
-    depth.grab_hand_position()
-    #os.system("python3 depth.py")
+    # remember the projector is on rn displaying previous depth map
+    os.system("python3 depth.py")
     
     print("ran depth.py")
     return
@@ -68,7 +62,8 @@ def scan_objects():
     global objects_scanned
     objects_scanned = True
 
-    # project black
+    # projector turns black -- TODO: needs to run consistently on the side
+    # if model is good enough, change to get_height_surface()
     get_black_surface()
     # run object detection
     os.system("python3 object.py")
@@ -126,6 +121,7 @@ def get_height_surface():
     global screen
     screen.blit(height_surface, (0, 0))
     pygame.display.update()
+    '''
     clock = pygame.time.Clock()
     start = time.time()
     while time.time() - start < 5:
@@ -133,6 +129,7 @@ def get_height_surface():
             if event.type == pygame.QUIT:
                 break
         clock.tick(60)
+    '''
     return
 
 
@@ -146,6 +143,7 @@ def get_black_surface():
     
     screen.blit(pygame.transform.scale(height_surface, (screen_w, screen_h)), (0, 0))
     pygame.display.update()
+    '''
     clock = pygame.time.Clock()
     start = time.time()
     while time.time() - start < 5:
@@ -153,6 +151,7 @@ def get_black_surface():
             if event.type == pygame.QUIT:
                 break
         clock.tick(60)
+    '''
     return
 
 '''
@@ -260,11 +259,9 @@ def start_sim():
 # END REALSENSE COMPONENTS
 # -------------
 pygame.init()
-#os.environ['SDL_VIDEO_CENTERED'] = "1"
-#info = pygame.display.Info()
-#screen_w, screen_h = info.current_w, info.current_h
-screen_h = 800
-screen_w = 1200
+os.environ['SDL_VIDEO_CENTERED'] = "1"
+info = pygame.display.Info()
+screen_w, screen_h = info.current_w, info.current_h
 screen = pygame.display.set_mode((screen_w, screen_h), pygame.RESIZABLE)
 pygame.display.set_caption("Height Surface Viewer")
 
@@ -275,7 +272,6 @@ pygame.quit()
 sim = start_sim()
 
 exit = False
-
 while not exit:
     for event in pygame.event.get():
         print(event.type)

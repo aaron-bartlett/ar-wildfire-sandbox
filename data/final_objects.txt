@@ -1,7 +1,6 @@
-house,314,198
-fire,372,269
-house,221,81
-tree,172,315
-tree,309,61
-tree,87,168
-house,215,187
+tree, 188, 180
+house, 84, 285
+tree, 77, 186
+tree, 354, 289
+house, 429, 206
+fire, 211, 109

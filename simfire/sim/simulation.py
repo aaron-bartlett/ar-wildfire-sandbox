@@ -984,7 +984,7 @@ class FireSimulation(Simulation):
         
             self._game = Game(
                 self.config.area.screen_size,
-                rescale_factor=(2.4),
+                rescale_factor=(2),
                 record=True,
                 show_wind_direction = True,
                 show_wind_magnitude = True
